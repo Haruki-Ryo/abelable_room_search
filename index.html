@@ -5,34 +5,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>大学空き教室検索</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kosugi&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
-            background-color: #f1f5f9; /* bg-slate-100 */
+        :root {
+            --bg-primary: #F5F5DC;
+            --bg-secondary: #f5f5f4;
+            --bg-tertiary: #e7e5e4;
+            --text-primary: #1c1917;
+            --text-secondary: #57534e;
+            --text-tertiary: #a8a29e;
+            --border-color: #d6d3d1;
+            --accent-color: #f97316;
+            --header-bg: #292524;
+            --header-text: #F5F5DC;
+            
+            /* Light Mode Specific Colors */
+            --tag-active-bg: #1c1917;
+            --tag-active-text: #F5F5DC;
+            --time-slot-selected-bg: #1c1917;
+            --time-slot-border: #d6d3d1;
+            --timeline-bg: #e7e5e4;
+            --timeline-bar-bg: #44403c;
+            --card-bg: #f5f5f4;
         }
-        /* カスタムスタイル */
-        .day-btn.active {
-            background-color: #1e293b; /* bg-slate-800 */
-            color: white;
-            border-color: #1e293b; /* border-slate-800 */
+
+        html.dark {
+            --bg-primary: #1c1917;
+            --bg-secondary: #292524;
+            --bg-tertiary: #44403c;
+            --text-primary: #f5f5f4;
+            --text-secondary: #a8a29e;
+            --text-tertiary: #78716c;
+            --border-color: #57534e;
+            --accent-color: #fb923c;
+            --header-bg: #0c0a09;
+            --header-text: #f5f5f4;
+
+            /* Dark Mode Specific Colors */
+            --tag-active-bg: #f97316;
+            --tag-active-text: #ffffff;
+            --time-slot-selected-bg: #f97316;
+            --time-slot-border: #57534e;
+            --timeline-bg: #44403c;
+            --timeline-bar-bg: #fb923c;
+            --card-bg: #292524;
+        }
+
+        body {
+            font-family: 'Kosugi', 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        /* Component Styles using variables */
+        .day-btn.active, .building-tag.active {
+            background-color: var(--tag-active-bg);
+            color: var(--tag-active-text);
+            border-color: var(--tag-active-bg);
         }
         .time-slot {
             transition: background-color 0.1s ease-in-out;
+            border-right: 1px solid var(--time-slot-border);
+        }
+        .time-slot:last-child {
+            border-right: none;
         }
         .time-slot.selected {
-            background-color: #334155; /* bg-slate-700 */
+            background-color: var(--time-slot-selected-bg);
         }
-        .building-tag.active {
-            background-color: #334155; /* bg-slate-700 */
-            color: white;
-            border-color: #334155;
-        }
-        #full-building-list li.selected, #full-university-list li.selected {
-            background-color: #f1f5f9; /* bg-slate-100 */
-        }
-        /* トースト通知のスタイル */
+        
+        /* Toast Notification */
         #toast-notification {
             transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
             transform: translateY(150%);
@@ -42,31 +87,23 @@
             transform: translateY(0);
             opacity: 1;
         }
-        /* スクロールバーのスタイル */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; /* bg-slate-300 */
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #e2e8f0; /* bg-slate-200 */
-        }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-tertiary); }
     </style>
 </head>
-<body class="bg-slate-100">
+<body>
 
     <!-- トースト通知 -->
-    <div id="toast-notification" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white py-2 px-5 rounded-lg shadow-lg z-50 flex items-center space-x-2">
+    <div id="toast-notification" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-orange-500 text-white py-2 px-5 rounded-lg shadow-lg z-50 flex items-center space-x-2">
         <i id="toast-icon" class="fas fa-check-circle"></i>
         <p id="toast-message"></p>
     </div>
 
-    <div class="container mx-auto max-w-lg bg-white min-h-screen shadow-xl">
+    <div class="container mx-auto max-w-lg bg-[var(--bg-primary)] min-h-screen shadow-xl">
         <!-- ヘッダー -->
-        <header class="bg-slate-800 text-white p-4 flex items-center justify-between shadow-md">
+        <header class="bg-[var(--header-bg)] text-[var(--header-text)] p-4 flex items-center justify-between shadow-md sticky top-0 z-20">
             <div class="flex items-center">
                 <i class="fas fa-home text-2xl mr-3"></i>
                 <h1 class="text-xl font-bold tracking-wider">大学空き教室検索</h1>
@@ -78,121 +115,273 @@
 
         <!-- メインコンテンツ -->
         <main class="p-4">
-            <!-- 検索項目 -->
-            <section id="search-criteria" class="bg-slate-50 p-4 rounded-lg shadow-sm mb-6">
-                <h2 class="text-lg font-semibold mb-4 flex items-center text-slate-700"><i class="fas fa-search mr-2"></i>検索項目</h2>
-                
-                <!-- 大学選択 -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-600 mb-1">大学</label>
-                    <div class="flex items-center space-x-2">
-                        <div class="relative flex-grow">
-                            <button id="university-select-btn" class="w-full text-left pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white">
-                                <span id="selected-university-name" class="text-slate-800">大学を選択...</span>
+            <!-- 検索ページ -->
+            <div id="search-page">
+                <section id="search-criteria" class="bg-[var(--bg-secondary)] p-4 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center text-[var(--text-primary)]"><i class="fas fa-search mr-2"></i>検索項目</h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">大学</label>
+                        <div class="flex items-center space-x-2">
+                            <div class="relative flex-grow">
+                                <button id="university-select-btn" class="w-full text-left pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]">
+                                    <span id="selected-university-name" class="text-[var(--text-primary)]">大学を選択...</span>
+                                </button>
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                    <i class="fas fa-graduation-cap text-[var(--text-tertiary)]"></i>
+                                </span>
+                            </div>
+                            <button id="location-btn" class="bg-[var(--accent-color)] text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity" aria-label="現在地から検索">
+                                <i class="fas fa-map-marker-alt"></i>
                             </button>
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <i class="fas fa-graduation-cap text-slate-400"></i>
-                            </span>
                         </div>
-                        <button id="location-btn" class="bg-slate-700 text-white px-4 py-2 rounded-md hover:bg-slate-800 transition-colors" aria-label="現在地から検索">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">曜日</label>
+                        <div id="day-selector" class="grid grid-cols-6 gap-2">
+                            <button data-day="1" class="day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors">月</button>
+                            <button data-day="2" class="day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors">火</button>
+                            <button data-day="3" class="day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors">水</button>
+                            <button data-day="4" class="day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors">木</button>
+                            <button data-day="5" class="day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors">金</button>
+                            <button data-day="6" class="day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors">土</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">時間</label>
+                        <div class="bg-[var(--bg-tertiary)] p-2 rounded-lg">
+                            <div class="grid grid-cols-7 text-center text-xs text-[var(--text-secondary)] mb-1">
+                                <span>8:00</span><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span><span>20:00</span>
+                            </div>
+                            <div id="time-slider" class="w-full h-10 bg-[var(--bg-primary)] rounded-md flex border border-[var(--border-color)] cursor-pointer select-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="search-btn" class="w-full bg-[var(--header-bg)] text-[var(--header-text)] font-bold py-3 rounded-lg hover:opacity-90 transition-all shadow-md flex items-center justify-center text-lg">
+                        <i class="fas fa-search mr-2"></i>さがす
+                    </button>
+                </section>
+
+                <div id="initial-message" class="text-center text-[var(--text-tertiary)] py-8">
+                    <i class="fas fa-search text-4xl mb-3"></i>
+                    <p>上の条件で検索してください</p>
+                </div>
+
+                <section id="results-section" class="hidden">
+                    <h2 id="results-header-title" class="text-lg font-semibold mb-4 flex items-center text-[var(--text-primary)]"><i class="fas fa-chalkboard-teacher mr-2"></i>空き教室</h2>
+                    <div id="building-filter-container" class="mb-4 flex items-center flex-wrap gap-2">
+                         <button id="nearby-building-btn" class="flex-shrink-0 bg-[var(--accent-color)] text-white px-3 py-1.5 rounded-full text-sm font-medium hover:opacity-90 transition-colors" aria-label="最寄りの建物を検索">
                             <i class="fas fa-map-marker-alt"></i>
                         </button>
+                        <button class="building-tag active flex-shrink-0 border border-[var(--border-color)] bg-[var(--bg-primary)] px-4 py-1.5 rounded-full text-sm font-medium" data-building="all">すべて</button>
+                        <button class="building-tag flex-shrink-0 border border-[var(--border-color)] bg-[var(--bg-primary)] px-4 py-1.5 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-building="全学共通A棟">全学共通A棟</button>
+                        <button class="building-tag flex-shrink-0 border border-[var(--border-color)] bg-[var(--bg-primary)] px-4 py-1.5 rounded-full text-sm font-medium text-[var(--text-secondary)]" data-building="全学共通B棟">全学共通B棟</button>
+                        <button id="more-buildings-btn" class="flex-shrink-0 text-[var(--text-secondary)] font-semibold text-sm hover:underline">もっとみる ></button>
                     </div>
-                </div>
-
-                <!-- 曜日選択 -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-600 mb-1">曜日</label>
-                    <div id="day-selector" class="grid grid-cols-6 gap-2">
-                        <button data-day="1" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">月</button>
-                        <button data-day="2" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">火</button>
-                        <button data-day="3" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">水</button>
-                        <button data-day="4" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">木</button>
-                        <button data-day="5" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">金</button>
-                        <button data-day="6" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">土</button>
-                    </div>
-                </div>
-
-                <!-- 時間選択 -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-600 mb-1">時間</label>
-                    <div class="bg-slate-200 p-2 rounded-lg">
-                        <div class="grid grid-cols-7 text-center text-xs text-slate-500 mb-1">
-                            <span>8:00</span><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span><span>20:00</span>
-                        </div>
-                        <div id="time-slider" class="w-full h-10 bg-white rounded-md flex border border-slate-300 cursor-pointer select-none">
-                            <!-- 30分単位で28スロット (8:00 - 22:00) -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 検索ボタン -->
-                <button id="search-btn" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-900 transition-all shadow-md flex items-center justify-center text-lg">
-                    <i class="fas fa-search mr-2"></i>さがす
-                </button>
-            </section>
-
-            <!-- 初回メッセージ -->
-            <div id="initial-message" class="text-center text-slate-500 py-8">
-                <i class="fas fa-search text-4xl mb-3"></i>
-                <p>上の条件で検索してください</p>
+                    <div id="results-container" class="space-y-4"></div>
+                </section>
             </div>
 
-            <!-- 空き教室結果 -->
-            <section id="results-section" class="hidden">
-                <h2 id="results-header-title" class="text-lg font-semibold mb-4 flex items-center text-slate-700"><i class="fas fa-chalkboard-teacher mr-2"></i>空き教室</h2>
-                
-                <!-- 建物フィルター -->
-                <div id="building-filter-container" class="mb-4 flex items-center flex-wrap gap-2">
-                    <button id="nearby-building-btn" class="flex-shrink-0 bg-slate-800 text-white px-3 py-1.5 rounded-full text-sm font-medium hover:bg-slate-900 transition-colors" aria-label="最寄りの建物を検索">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </button>
-                    <button class="building-tag active flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium" data-building="all">すべて</button>
-                    <button class="building-tag flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-slate-600" data-building="全学共通A棟">全学共通A棟</button>
-                    <button class="building-tag flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-slate-600" data-building="全学共通B棟">全学共通B棟</button>
-                    <button id="more-buildings-btn" class="flex-shrink-0 text-slate-500 font-semibold text-sm hover:underline">もっとみる ></button>
+            <!-- 使い方ページ -->
+            <div id="how-to-use-page" class="hidden">
+                <button class="back-to-search-btn mb-4 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><i class="fas fa-arrow-left mr-2"></i>検索に戻る</button>
+                <div class="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                    <h2 class="text-xl font-bold mb-6 text-[var(--text-primary)] text-center">使い方ガイド</h2>
+                    <div class="space-y-6 text-[var(--text-secondary)]">
+                        <div class="p-4 border border-[var(--border-color)] rounded-lg">
+                            <h3 class="font-semibold text-[var(--text-primary)] mb-2 flex items-center"><span class="bg-[var(--accent-color)] text-white rounded-full h-6 w-6 flex items-center justify-center mr-3">1</span>検索条件の指定</h3>
+                            <p>トップページで<i class="fas fa-university mx-1"></i><strong>大学</strong>、<i class="fas fa-calendar-day mx-1"></i><strong>曜日</strong>、<i class="fas fa-clock mx-1"></i><strong>時間</strong>の３つの条件を指定します。時間帯はドラッグで範囲選択できます。</p>
+                        </div>
+                        <div class="p-4 border border-[var(--border-color)] rounded-lg">
+                            <h3 class="font-semibold text-[var(--text-primary)] mb-2 flex items-center"><span class="bg-[var(--accent-color)] text-white rounded-full h-6 w-6 flex items-center justify-center mr-3">2</span>教室をさがす</h3>
+                            <p>条件を指定したら、<i class="fas fa-search mx-1"></i><strong>さがす</strong>ボタンをタップ。条件に合う空き教室が一覧で表示されます。</p>
+                        </div>
+                        <div class="p-4 border border-[var(--border-color)] rounded-lg">
+                            <h3 class="font-semibold text-[var(--text-primary)] mb-2 flex items-center"><span class="bg-[var(--accent-color)] text-white rounded-full h-6 w-6 flex items-center justify-center mr-3">3</span>結果の確認</h3>
+                            <p>各教室カードには、名前や設備の他に、その日の空き時間がタイムラインで表示されます。色が付いている部分が利用可能な時間帯です。</p>
+                        </div>
+                        <div class="p-4 border border-[var(--border-color)] rounded-lg">
+                            <h3 class="font-semibold text-[var(--text-primary)] mb-2 flex items-center"><span class="bg-[var(--accent-color)] text-white rounded-full h-6 w-6 flex items-center justify-center mr-3">4</span>教室レビュー</h3>
+                            <p>メニューの<i class="fas fa-comment-dots mx-1"></i><strong>教室レビュー</strong>から、各教室の設備などの情報を投稿できます。みんなで情報を共有しましょう！</p>
+                        </div>
+                         <div class="p-4 border border-[var(--border-color)] rounded-lg">
+                            <h3 class="font-semibold text-[var(--text-primary)] mb-2 flex items-center"><span class="bg-[var(--accent-color)] text-white rounded-full h-6 w-6 flex items-center justify-center mr-3">5</span>表示モードの切替</h3>
+                            <p>メニューの<i class="fas fa-palette mx-1"></i><strong>モード</strong>から、見やすい表示（ライト/ダーク）にいつでも切り替えられます。</p>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <!-- 結果表示エリア -->
-                <div id="results-container" class="space-y-4">
-                    <!-- 検索結果がここに挿入されます -->
-                </div>
-            </section>
+            <!-- レビューページ -->
+            <div id="review-page" class="hidden">
+                 <button class="back-to-search-btn mb-4 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><i class="fas fa-arrow-left mr-2"></i>検索に戻る</button>
+                 <div class="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                    <h2 class="text-xl font-bold mb-4 text-[var(--text-primary)]">教室レビュー投稿</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">大学</label>
+                            <div class="flex items-center space-x-2">
+                                <div class="relative flex-grow">
+                                    <button id="review-university-select-btn" class="w-full text-left pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]">
+                                        <span id="review-selected-university-name" class="text-[var(--text-primary)]">大学を選択...</span>
+                                    </button>
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fas fa-graduation-cap text-[var(--text-tertiary)]"></i></span>
+                                </div>
+                                <button id="review-location-university-btn" class="bg-[var(--accent-color)] text-white px-4 py-2 rounded-md hover:opacity-90" aria-label="現在地から大学を検索"><i class="fas fa-map-marker-alt"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">建物</label>
+                             <div class="flex items-center space-x-2">
+                                <div class="relative flex-grow">
+                                    <button id="review-building-select-btn" class="w-full text-left pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]">
+                                        <span id="review-selected-building-name" class="text-[var(--text-primary)]">建物を選択...</span>
+                                    </button>
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fas fa-building text-[var(--text-tertiary)]"></i></span>
+                                </div>
+                                <button id="review-location-building-btn" class="bg-[var(--accent-color)] text-white px-4 py-2 rounded-md hover:opacity-90" aria-label="現在地から建物を検索"><i class="fas fa-map-marker-alt"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">教室</label>
+                            <div class="relative flex-grow">
+                                <button id="review-classroom-select-btn" class="w-full text-left pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]">
+                                    <span id="review-selected-classroom-name" class="text-[var(--text-primary)]">教室を選択...</span>
+                                </button>
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i class="fas fa-chalkboard text-[var(--text-tertiary)]"></i></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-[var(--text-secondary)] mb-1">タグ</label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center space-x-2 p-2 border border-[var(--border-color)] rounded-md"><input type="checkbox" class="form-checkbox text-[var(--accent-color)]"><span>コンセントあり</span></label>
+                                <label class="flex items-center space-x-2 p-2 border border-[var(--border-color)] rounded-md"><input type="checkbox" class="form-checkbox text-[var(--accent-color)]"><span>会話OK</span></label>
+                                <label class="flex items-center space-x-2 p-2 border border-[var(--border-color)] rounded-md"><input type="checkbox" class="form-checkbox text-[var(--accent-color)]"><span>混みがち</span></label>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="review-comment" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">コメント</label>
+                            <textarea id="review-comment" rows="4" class="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--bg-primary)] text-[var(--text-primary)]" placeholder="例：窓際の席は日当たりが良いです"></textarea>
+                        </div>
+                        <button id="submit-review-btn" class="w-full bg-[var(--header-bg)] text-[var(--header-text)] font-bold py-2 rounded-lg hover:opacity-90 transition-opacity">投稿する</button>
+                    </div>
+                 </div>
+            </div>
         </main>
     </div>
 
-    <!-- 大学選択モーダル -->
-    <div id="university-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center">
+    <!-- 大学選択モーダル (レビュー用) -->
+    <div id="review-university-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
+        <div class="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
                 <h3 class="text-lg font-bold">大学一覧</h3>
-                <button id="close-university-modal-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+                <button id="close-review-university-modal-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl">&times;</button>
             </div>
             <div class="p-4 flex-grow overflow-y-auto">
-                <input type="text" id="university-search-input" placeholder="大学名で検索..." class="w-full px-3 py-2 border border-slate-300 rounded-md mb-4">
-                <ul id="full-university-list" class="space-y-1">
-                    <!-- 大学リストがここに挿入されます -->
-                </ul>
+                <input type="text" id="review-university-search-input" placeholder="大学名で検索..." class="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]">
+                <ul id="full-review-university-list" class="space-y-1"></ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 建物選択モーダル (レビュー用) -->
+    <div id="review-building-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
+        <div class="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+                <h3 class="text-lg font-bold">建物一覧</h3>
+                <button id="close-review-building-modal-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl">&times;</button>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto">
+                <input type="text" id="review-building-search-input" placeholder="建物名で検索..." class="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]">
+                <ul id="full-review-building-list" class="space-y-1"></ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 教室選択モーダル (レビュー用) -->
+    <div id="review-classroom-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
+        <div class="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+                <h3 class="text-lg font-bold">教室一覧</h3>
+                <button id="close-review-classroom-modal-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl">&times;</button>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto">
+                <input type="text" id="review-classroom-search-input" placeholder="教室名で検索..." class="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]">
+                <ul id="full-review-classroom-list" class="space-y-1"></ul>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 大学選択モーダル -->
+    <div id="university-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
+        <div class="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+                <h3 class="text-lg font-bold">大学一覧</h3>
+                <button id="close-university-modal-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl">&times;</button>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto">
+                <input type="text" id="university-search-input" placeholder="大学名で検索..." class="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]">
+                <ul id="full-university-list" class="space-y-1"></ul>
             </div>
         </div>
     </div>
 
     <!-- 建物選択モーダル -->
     <div id="buildings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
-            <div class="p-4 border-b flex justify-between items-center">
+        <div class="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
                 <h3 class="text-lg font-bold">建物一覧</h3>
-                <button id="close-buildings-modal-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+                <button id="close-buildings-modal-btn" class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl">&times;</button>
             </div>
             <div class="p-4 flex-grow overflow-y-auto">
-                <input type="text" id="building-search-input" placeholder="建物名で検索..." class="w-full px-3 py-2 border border-slate-300 rounded-md mb-4">
-                <ul id="full-building-list" class="space-y-1">
-                    <!-- 全ての建物リストがここに挿入されます -->
+                <input type="text" id="building-search-input" placeholder="建物名で検索..." class="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]">
+                <ul id="full-building-list" class="space-y-1"></ul>
+            </div>
+            <div class="p-4 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]">
+                <button id="modal-done-btn" class="w-full bg-[var(--header-bg)] text-[var(--header-text)] font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-colors">完了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Menu (Drawer) -->
+    <div id="side-menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-30"></div>
+    <div id="side-menu" class="fixed top-0 right-0 h-full w-64 bg-[var(--header-bg)] text-[var(--header-text)] shadow-xl z-40 transform translate-x-full transition-transform duration-300 ease-in-out">
+        <div class="p-4">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-lg font-semibold">メニュー</h2>
+                <button id="close-menu-btn" class="text-2xl">&times;</button>
+            </div>
+            <nav>
+                <ul>
+                    <li class="mb-4">
+                        <a href="#" id="how-to-use-link" class="flex items-center p-2 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)] transition-colors">
+                            <i class="fas fa-lightbulb w-6 text-center mr-3"></i>
+                            <span>使い方</span>
+                        </a>
+                    </li>
+                    <li class="mb-4">
+                        <a href="#" id="review-link" class="flex items-center p-2 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)] transition-colors">
+                            <i class="fas fa-comment-dots w-6 text-center mr-3"></i>
+                            <span>教室レビュー</span>
+                        </a>
+                    </li>
+                    <li class="mb-4">
+                        <div id="mode-select-menu" class="flex items-center p-2 rounded-md">
+                            <i class="fas fa-palette w-6 text-center mr-3"></i>
+                            <span>モード</span>
+                        </div>
+                         <div class="mt-2 pl-8 space-y-2">
+                            <button data-theme="light" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)]">ライト</button>
+                            <button data-theme="dark" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)]">ダーク</button>
+                            <button data-theme="system" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)]">システム</button>
+                        </div>
+                    </li>
                 </ul>
-            </div>
-            <div class="p-4 border-t bg-slate-50">
-                <button id="modal-done-btn" class="w-full bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-800 transition-colors">完了</button>
-            </div>
+            </nav>
         </div>
     </div>
 
@@ -200,63 +389,69 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- サンプルデータ ---
-            const mockUniversities = [ "東京大学", "京都大学", "大阪大学", "早稲田大学", "慶應義塾大学", "明治大学", "法政大学", "立教大学", "中央大学", "青山学院大学", "上智大学" ];
+            const mockUniversities = [ 
+                { name: "東京大学", lat: 35.7128, lon: 139.7624 },
+                { name: "京都大学", lat: 35.0262, lon: 135.7808 },
+                { name: "大阪大学", lat: 34.8213, lon: 135.5220 },
+                { name: "早稲田大学", lat: 35.7091, lon: 139.7192 },
+                { name: "慶應義塾大学", lat: 35.6486, lon: 139.7403 },
+            ];
             const mockClassrooms = [
                 // 全学共通A棟
-                { id: 1, name: '301号室', building: '全学共通A棟', lat: 35.6812, lon: 139.7671, attributes: ['会話OK', 'コンセント有'], schedule: { 
+                { id: 1, name: '301号室', building: '全学共通A棟', lat: 34.823, lon: 135.523, attributes: ['会話OK', 'コンセント有'], schedule: { 
                     '1': [{ start: '10:40', end: '12:10' }, { start: '13:00', end: '14:30' }], // 月
                     '3': [{ start: '09:00', end: '10:30' }, { start: '14:45', end: '16:15' }], // 水
                     '5': [{ start: '16:30', end: '18:00' }]  // 金
                 } },
-                { id: 2, name: '102号室', building: '全学共通A棟', lat: 35.6812, lon: 139.7671, attributes: ['コンセント有'], schedule: { 
+                { id: 2, name: '102号室', building: '全学共通A棟', lat: 34.823, lon: 135.523, attributes: ['コンセント有'], schedule: { 
                     '2': [{ start: '09:00', end: '12:10' }], // 火
                     '4': [{ start: '13:00', end: '17:30' }]  // 木
                 } },
-                { id: 7, name: '103号室', building: '全学共通A棟', lat: 35.6812, lon: 139.7671, attributes: ['コンセント有'], schedule: {
+                { id: 7, name: '103号室', building: '全学共通A棟', lat: 34.823, lon: 135.523, attributes: ['コンセント有'], schedule: {
                     '1': [{ start: '09:00', end: '10:30' }, { start: '10:40', end: '12:10' }], // 月
                     '3': [{ start: '13:00', end: '16:15' }], // 水
                     '4': [{ start: '09:00', end: '12:10' }]  // 木
                 } },
 
                 // 全学共通B棟
-                { id: 3, name: '205号室', building: '全学共通B棟', lat: 35.6810, lon: 139.7675, attributes: [], schedule: { 
+                { id: 3, name: '205号室', building: '全学共通B棟', lat: 34.822, lon: 135.524, attributes: [], schedule: { 
                     '1': [{ start: '14:45', end: '16:15' }], // 月
                     '2': [{ start: '10:40', end: '12:10' }], // 火
                     '5': [{ start: '09:00', end: '12:10' }, { start: '13:00', end: '14:30' }] // 金
                 } },
-                { id: 8, name: '208号室', building: '全学共通B棟', lat: 35.6810, lon: 139.7675, attributes: ['会話OK'], schedule: {
+                { id: 8, name: '208号室', building: '全学共通B棟', lat: 34.822, lon: 135.524, attributes: ['会話OK'], schedule: {
                     '2': [{ start: '13:00', end: '14:30' }], // 火
                     '4': [{ start: '09:00', end: '10:30' }, { start: '10:40', end: '12:10' }], // 木
                     '5': [{ start: '14:45', end: '17:00' }] // 金
                 } },
 
                 // 全学共通C棟
-                { id: 4, name: '401号室', building: '全学共通C棟', lat: 35.6815, lon: 139.7670, attributes: ['会話OK'], schedule: { 
+                { id: 4, name: '401号室', building: '全学共通C棟', lat: 34.821, lon: 135.525, attributes: ['会話OK'], schedule: { 
                     '1': [], // 月曜は終日空き
                     '3': [{ start: '09:00', end: '12:10' }, { start: '16:30', end: '18:00' }], // 水
                     '5': [{ start: '09:00', end: '17:00' }] // 金
                 } },
-                { id: 9, name: '303号室', building: '全学共通C棟', lat: 35.6815, lon: 139.7670, attributes: [], schedule: {
+                { id: 9, name: '303号室', building: '全学共通C棟', lat: 34.821, lon: 135.525, attributes: [], schedule: {
                     '2': [{ start: '10:40', end: '12:10' }], // 火
                     '4': [{ start: '14:45', end: '16:15' }], // 木
                     '5': [{ start: '09:00', end: '10:30' }] // 金
                 } },
                 
                 // その他
-                { id: 5, name: '101演習室', building: '情報学部棟', lat: 35.6820, lon: 139.7680, attributes: ['コンセント有'], schedule: { 
+                { id: 5, name: '101演習室', building: '情報学部棟', lat: 34.820, lon: 135.526, attributes: ['コンセント有'], schedule: { 
                     '1': [{ start: '09:00', end: '17:30' }], // 月
                     '2': [], // 火曜は終日空き
                     '3': [{ start: '13:00', end: '15:00' }], // 水
                     '4': [{ start: '09:00', end: '12:10' }]  // 木
                 } },
-                { id: 6, name: '大会議室', building: '本部棟', lat: 35.6800, lon: 139.7660, attributes: ['会話OK', 'コンセント有'], schedule: { 
+                { id: 6, name: '大会議室', building: '本部棟', lat: 34.819, lon: 135.527, attributes: ['会話OK', 'コンセント有'], schedule: { 
                     '1': [{ start: '10:00', end: '11:00' }], // 月
                     '2': [{ start: '14:00', end: '17:00' }], // 火
                     '3': [{ start: '08:00', end: '22:00' }], // 水 (終日利用不可)
                     '4': [{ start: '10:00', end: '12:00' }], // 木
                     '5': [{ start: '13:00', end: '18:00' }]  // 金
                 } },
-                { id: 10, name: 'LL教室', building: '語学センター', lat: 35.6822, lon: 139.7678, attributes: ['コンセント有'], schedule: { 
+                { id: 10, name: 'LL教室', building: '語学センター', lat: 34.818, lon: 135.528, attributes: ['コンセント有'], schedule: { 
                     '1': [{ start: '13:00', end: '14:30' }], // 月
                     '2': [{ start: '10:40', end: '12:10' }], // 火
                     '3': [{ start: '14:45', end: '16:15' }], // 水
@@ -292,15 +487,59 @@
             const modalDoneBtn = document.getElementById('modal-done-btn');
             const fullBuildingList = document.getElementById('full-building-list');
             const buildingSearchInput = document.getElementById('building-search-input');
+            const menuBtn = document.getElementById('menu-btn');
+            const sideMenu = document.getElementById('side-menu');
+            const sideMenuOverlay = document.getElementById('side-menu-overlay');
+            const closeMenuBtn = document.getElementById('close-menu-btn');
+            const howToUseLink = document.getElementById('how-to-use-link');
+            const reviewLink = document.getElementById('review-link');
+            const searchPage = document.getElementById('search-page');
+            const howToUsePage = document.getElementById('how-to-use-page');
+            const reviewPage = document.getElementById('review-page');
+            const submitReviewBtn = document.getElementById('submit-review-btn');
+            
+            // Review Page Elements
+            const reviewUniversitySelectBtn = document.getElementById('review-university-select-btn');
+            const reviewSelectedUniversityName = document.getElementById('review-selected-university-name');
+            const reviewLocationUniversityBtn = document.getElementById('review-location-university-btn');
+            const reviewBuildingSelectBtn = document.getElementById('review-building-select-btn');
+            const reviewSelectedBuildingName = document.getElementById('review-selected-building-name');
+            const reviewLocationBuildingBtn = document.getElementById('review-location-building-btn');
+            const reviewClassroomSelectBtn = document.getElementById('review-classroom-select-btn');
+            const reviewSelectedClassroomName = document.getElementById('review-selected-classroom-name');
+            
+            // Review Modals
+            const reviewUniversityModal = document.getElementById('review-university-modal');
+            const closeReviewUniversityModalBtn = document.getElementById('close-review-university-modal-btn');
+            const reviewUniversitySearchInput = document.getElementById('review-university-search-input');
+            const fullReviewUniversityList = document.getElementById('full-review-university-list');
+
+            const reviewBuildingModal = document.getElementById('review-building-modal');
+            const closeReviewBuildingModalBtn = document.getElementById('close-review-building-modal-btn');
+            const reviewBuildingSearchInput = document.getElementById('review-building-search-input');
+            const fullReviewBuildingList = document.getElementById('full-review-building-list');
+
+            const reviewClassroomModal = document.getElementById('review-classroom-modal');
+            const closeReviewClassroomModalBtn = document.getElementById('close-review-classroom-modal-btn');
+            const reviewClassroomSearchInput = document.getElementById('review-classroom-search-input');
+            const fullReviewClassroomList = document.getElementById('full-review-classroom-list');
+
 
             // --- 状態管理 ---
             let selectedUniversity = "東京大学";
-            let selectedDays = new Set();
+            let selectedDay = null;
             let selectedTimeSlots = new Set();
             let isDragging = false;
             let dragStartSlot = -1;
             let selectedBuildings = new Set(['all']);
             let toastTimeout;
+            
+            // Review Page State
+            let reviewState = {
+                university: null,
+                building: null,
+                classroom: null
+            };
 
             // --- 初期化処理 ---
             const init = () => {
@@ -308,16 +547,18 @@
 
                 for (let i = 0; i < 28; i++) {
                     const slot = document.createElement('div');
-                    slot.classList.add('time-slot', 'flex-1', 'border-r', 'border-slate-300', 'last:border-r-0');
+                    slot.classList.add('time-slot', 'flex-1');
                     timeSlider.appendChild(slot);
                 }
-                const today = new Date().getDay();
-                const todayBtn = daySelector.querySelector(`[data-day="${today === 0 ? 1 : today}"]`);
+                const today = new Date().getDay(); // 0:Sun, 1:Mon...
+                const todayDataDay = today === 0 ? 1 : today; // Sun maps to Mon
+                const todayBtn = daySelector.querySelector(`[data-day="${todayDataDay}"]`);
                 if (todayBtn) {
                     todayBtn.classList.add('active');
-                    selectedDays.add(todayBtn.dataset.day);
+                    selectedDay = todayBtn.dataset.day;
                 }
                 setupEventListeners();
+                themeManager.init();
             };
 
             // --- イベントリスナー設定 ---
@@ -330,20 +571,12 @@
 
                 daySelector.addEventListener('click', handleDaySelect);
                 
-                // マウスイベント
                 timeSlider.addEventListener('mousedown', (e) => startDrag(e));
                 timeSlider.addEventListener('mousemove', (e) => duringDrag(e));
                 document.addEventListener('mouseup', endDrag);
                 
-                // タッチイベント
-                timeSlider.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    startDrag(e.touches[0]);
-                }, { passive: false });
-                timeSlider.addEventListener('touchmove', (e) => {
-                    e.preventDefault();
-                    duringDrag(e.touches[0]);
-                }, { passive: false });
+                timeSlider.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e.touches[0]); }, { passive: false });
+                timeSlider.addEventListener('touchmove', (e) => { e.preventDefault(); duringDrag(e.touches[0]); }, { passive: false });
                 document.addEventListener('touchend', endDrag);
 
                 searchBtn.addEventListener('click', () => handleSearch(true));
@@ -359,22 +592,97 @@
                 closeBuildingsModalBtn.addEventListener('click', () => buildingsModal.classList.add('hidden'));
                 modalDoneBtn.addEventListener('click', handleModalDone);
                 buildingSearchInput.addEventListener('input', filterBuildingList);
+
+                // Menu event listeners
+                menuBtn.addEventListener('click', () => {
+                    sideMenu.classList.remove('translate-x-full');
+                    sideMenuOverlay.classList.remove('hidden');
+                });
+                closeMenuBtn.addEventListener('click', closeMenu);
+                sideMenuOverlay.addEventListener('click', closeMenu);
+
+                howToUseLink.addEventListener('click', (e) => { e.preventDefault(); showPage('how-to-use-page'); closeMenu(); });
+                reviewLink.addEventListener('click', (e) => { e.preventDefault(); showPage('review-page'); closeMenu(); });
+                document.querySelectorAll('.back-to-search-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => { e.preventDefault(); showPage('search-page'); });
+                });
+                
+                document.querySelectorAll('.theme-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        themeManager.setTheme(btn.dataset.theme);
+                    });
+                });
+                
+                // Review Page Listeners
+                reviewUniversitySelectBtn.addEventListener('click', openReviewUniversityModal);
+                closeReviewUniversityModalBtn.addEventListener('click', () => reviewUniversityModal.classList.add('hidden'));
+                reviewUniversitySearchInput.addEventListener('input', filterReviewUniversityList);
+                fullReviewUniversityList.addEventListener('click', handleReviewUniversitySelect);
+                reviewLocationUniversityBtn.addEventListener('click', handleReviewLocationUniversity);
+
+                reviewBuildingSelectBtn.addEventListener('click', openReviewBuildingModal);
+                closeReviewBuildingModalBtn.addEventListener('click', () => reviewBuildingModal.classList.add('hidden'));
+                reviewBuildingSearchInput.addEventListener('input', filterReviewBuildingList);
+                fullReviewBuildingList.addEventListener('click', handleReviewBuildingSelect);
+                reviewLocationBuildingBtn.addEventListener('click', handleReviewLocationBuilding);
+
+                reviewClassroomSelectBtn.addEventListener('click', openReviewClassroomModal);
+                closeReviewClassroomModalBtn.addEventListener('click', () => reviewClassroomModal.classList.add('hidden'));
+                reviewClassroomSearchInput.addEventListener('input', filterReviewClassroomList);
+                fullReviewClassroomList.addEventListener('click', handleReviewClassroomSelect);
+
+
+                submitReviewBtn.addEventListener('click', () => {
+                    showToast('レビューを投稿しました！');
+                    showPage('search-page');
+                });
             };
+            
+            // --- テーマ管理 ---
+            const themeManager = {
+                init() {
+                    const savedTheme = localStorage.getItem('theme') || 'system';
+                    this.setTheme(savedTheme);
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                        if (localStorage.getItem('theme') === 'system') {
+                            this.applyTheme();
+                        }
+                    });
+                },
+                setTheme(theme) {
+                    localStorage.setItem('theme', theme);
+                    this.applyTheme();
+                },
+                applyTheme() {
+                    const theme = localStorage.getItem('theme') || 'system';
+                    if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }
+            };
+
+            // --- ページ管理 ---
+            function showPage(pageId) {
+                [searchPage, howToUsePage, reviewPage].forEach(page => {
+                    page.classList.add('hidden');
+                });
+                document.getElementById(pageId).classList.remove('hidden');
+            }
 
             // --- UIヘルパー ---
             function showToast(message, isError = false) {
                 clearTimeout(toastTimeout);
                 toastMessage.textContent = message;
                 
-                toastNotification.classList.remove('bg-green-500', 'bg-slate-800', 'bg-red-500');
+                toastNotification.classList.remove('bg-stone-800', 'bg-red-500');
                 toastIcon.classList.remove('fa-check-circle', 'fa-exclamation-triangle');
 
                 if (isError) {
                     toastNotification.classList.add('bg-red-500');
-                    toastIcon.classList.add('fa-exclamation-triangle');
                 } else {
-                    toastNotification.classList.add('bg-slate-800');
-                    toastIcon.classList.add('fa-check-circle');
+                    toastNotification.classList.add('bg-orange-500');
                 }
 
                 toastNotification.classList.add('show');
@@ -382,14 +690,23 @@
                     toastNotification.classList.remove('show');
                 }, 2500);
             }
+            
+            function closeMenu() {
+                sideMenu.classList.add('translate-x-full');
+                sideMenuOverlay.classList.add('hidden');
+            }
 
             // --- UIイベントハンドラ ---
             function handleDaySelect(e) {
                 if (!e.target.classList.contains('day-btn')) return;
+                
+                daySelector.querySelectorAll('.day-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
                 const btn = e.target;
-                const day = btn.dataset.day;
-                btn.classList.toggle('active');
-                selectedDays.has(day) ? selectedDays.delete(day) : selectedDays.add(day);
+                btn.classList.add('active');
+                selectedDay = btn.dataset.day;
             }
 
             function getSlotIndexFromEvent(e) {
@@ -455,23 +772,7 @@
             }
 
             function handleSelectNearbyBuilding() {
-                const currentUserPosition = { lat: 35.6813, lon: 139.7672 };
-                let nearestBuilding = null;
-                let minDistance = Infinity;
-                const buildingsWithCoords = {};
-                mockClassrooms.forEach(room => {
-                    if (!buildingsWithCoords[room.building]) {
-                        buildingsWithCoords[room.building] = { lat: room.lat, lon: room.lon };
-                    }
-                });
-                for (const building in buildingsWithCoords) {
-                    const pos = buildingsWithCoords[building];
-                    const distance = Math.pow(currentUserPosition.lat - pos.lat, 2) + Math.pow(currentUserPosition.lon - pos.lon, 2);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        nearestBuilding = building;
-                    }
-                }
+                const nearestBuilding = findNearestBuilding();
                 if (nearestBuilding) {
                     showToast(`現在地から${nearestBuilding}を適用しました`);
                     selectedBuildings.delete('all');
@@ -490,23 +791,22 @@
                     if (!selectedBuildings.has('all') && !selectedBuildings.has(room.building)) {
                         return false;
                     }
-                    for (const day of selectedDays) {
-                        const scheduleForDay = room.schedule[day] || [];
-                        const isBusy = scheduleForDay.some(slot => {
-                            const slotStart = timeToHours(slot.start);
-                            const slotEnd = timeToHours(slot.end);
-                            return Math.max(searchStartTime, slotStart) < Math.min(searchEndTime, slotEnd);
-                        });
-                        if (!isBusy) return true;
-                    }
-                    return false;
+                    
+                    const scheduleForDay = room.schedule[selectedDay] || [];
+                    const isBusy = scheduleForDay.some(slot => {
+                        const slotStart = timeToHours(slot.start);
+                        const slotEnd = timeToHours(slot.end);
+                        return Math.max(searchStartTime, slotStart) < Math.min(searchEndTime, slotEnd);
+                    });
+
+                    return !isBusy;
                 });
                 availableRooms.sort((a, b) => a.building.localeCompare(b.building) || a.name.localeCompare(b.name));
                 renderResults(availableRooms);
             }
 
             function handleSearch(showLoading) {
-                if (selectedDays.size === 0 || selectedTimeSlots.size === 0) {
+                if (!selectedDay || selectedTimeSlots.size === 0) {
                     showToast('曜日と時間を選択してください', true);
                     return;
                 }
@@ -518,7 +818,7 @@
                     resultsHeaderTitle.classList.add('hidden');
                     buildingFilterContainer.classList.add('hidden');
                     resultsContainer.innerHTML = `
-                        <div class="text-center text-slate-500 py-8">
+                        <div class="text-center text-stone-500 py-8">
                             <i class="fas fa-spinner fa-spin text-4xl mb-3"></i>
                             <p>空き教室を検索中...</p>
                         </div>
@@ -537,7 +837,7 @@
                 
                 resultsContainer.innerHTML = '';
                 if (rooms.length === 0) {
-                    resultsContainer.innerHTML = `<div class="text-center text-slate-500 py-8"><i class="fas fa-ghost text-4xl mb-3"></i><p>条件に合う空き教室はありませんでした。</p></div>`;
+                    resultsContainer.innerHTML = `<div class="text-center text-stone-500 py-8"><i class="fas fa-ghost text-4xl mb-3"></i><p>条件に合う空き教室はありませんでした。</p></div>`;
                     return;
                 }
                 rooms.forEach(room => {
@@ -548,46 +848,29 @@
 
             function createClassroomCard(room) {
                 const card = document.createElement('div');
-                card.className = 'bg-white p-4 rounded-lg shadow-sm border border-slate-200';
+                card.className = 'bg-[var(--card-bg)] p-4 rounded-lg shadow-sm border border-[var(--border-color)]';
                 const tagsHTML = room.attributes.map(attr => {
                     const icon = attr === '会話OK' ? 'fa-comments' : 'fa-plug';
-                    const color = attr === '会話OK' ? 'bg-slate-200 text-slate-800' : 'bg-slate-200 text-slate-800';
-                    return `<span class="text-xs font-medium px-2.5 py-0.5 rounded-full ${color}"><i class="fas ${icon} mr-1"></i>${attr}</span>`;
+                    return `<span class="bg-[var(--bg-secondary)] text-[var(--text-primary)] text-xs font-medium px-2.5 py-0.5 rounded-full"><i class="fas ${icon} mr-1"></i>${attr}</span>`;
                 }).join(' ');
                 
-                let availableDay = null;
-                for (const day of selectedDays) {
-                    const scheduleForDay = room.schedule[day] || [];
-                    const searchStartTime = 8 + (Math.min(...selectedTimeSlots) * 0.5);
-                    const searchEndTime = 8 + ((Math.max(...selectedTimeSlots) + 1) * 0.5);
-                    const isBusy = scheduleForDay.some(slot => {
-                        const slotStart = timeToHours(slot.start);
-                        const slotEnd = timeToHours(slot.end);
-                        return Math.max(searchStartTime, slotStart) < Math.min(searchEndTime, slotEnd);
-                    });
-                    if (!isBusy) {
-                        availableDay = day;
-                        break;
-                    }
-                }
-
-                const daySchedule = room.schedule[availableDay] || [];
+                const daySchedule = room.schedule[selectedDay] || [];
                 const freeSlotsHTML = generateFreeSlotsTimeline(daySchedule);
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-xs font-semibold text-slate-500">${room.building}</span>
-                            <h3 class="text-2xl font-bold text-slate-800">${room.name}</h3>
+                            <span class="bg-stone-800 text-white text-xs font-normal px-2.5 py-1 rounded-full">${room.building}</span>
+                            <h3 class="text-2xl font-bold text-[var(--text-primary)] mt-2">${room.name}</h3>
                         </div>
                         <div class="flex space-x-2">${tagsHTML}</div>
                     </div>
                     <div class="mt-3">
-                        <div class="flex justify-between text-xs text-slate-500"><span>8:00</span><span>22:00</span></div>
-                        <div class="w-full h-6 bg-slate-200 rounded-md flex relative overflow-hidden">
+                        <div class="flex justify-between text-xs text-[var(--text-secondary)]"><span>8:00</span><span>22:00</span></div>
+                        <div class="w-full h-6 bg-[var(--timeline-bg)] rounded-md flex relative overflow-hidden">
                             ${freeSlotsHTML}
                         </div>
-                        <p class="text-xs text-slate-500 mt-1 text-right">空き時間（${['日','月','火','水','木','金','土'][availableDay]}曜）</p>
+                        <p class="text-xs text-[var(--text-secondary)] mt-1 text-right">空き時間（${['日','月','火','水','木','金','土'][selectedDay]}曜）</p>
                     </div>`;
                 return card;
             }
@@ -605,7 +888,7 @@
                         const freeEnd = busySlot.start;
                         const left = ((freeStart - dayStart) / totalMinutes) * 100;
                         const width = ((freeEnd - freeStart) / totalMinutes) * 100;
-                        freeSlotsHTML += `<div class="absolute h-full bg-slate-500" style="left: ${left}%; width: ${width}%;"></div>`;
+                        freeSlotsHTML += `<div class="absolute h-full" style="left: ${left}%; width: ${width}%; background-color: var(--timeline-bar-bg);"></div>`;
                     }
                     lastBusyEnd = Math.max(lastBusyEnd, busySlot.end);
                 });
@@ -614,10 +897,10 @@
                     const freeEnd = dayEnd;
                     const left = ((freeStart - dayStart) / totalMinutes) * 100;
                     const width = ((freeEnd - freeStart) / totalMinutes) * 100;
-                    freeSlotsHTML += `<div class="absolute h-full bg-slate-500" style="left: ${left}%; width: ${width}%;"></div>`;
+                    freeSlotsHTML += `<div class="absolute h-full" style="left: ${left}%; width: ${width}%; background-color: var(--timeline-bar-bg);"></div>`;
                 }
                 if (busySlots.length === 0) {
-                     freeSlotsHTML = `<div class="absolute h-full bg-slate-500" style="left: 0%; width: 100%;"></div>`;
+                     freeSlotsHTML = `<div class="absolute h-full" style="left: 0%; width: 100%; background-color: var(--timeline-bar-bg);"></div>`;
                 }
                 return freeSlotsHTML;
             }
@@ -631,6 +914,37 @@
                 const [h, m] = timeStr.split(':').map(Number);
                 return h * 60 + m;
             }
+            
+            // --- 位置情報関連 ---
+            const currentUserPosition = { lat: 34.823, lon: 135.46 }; // 大阪大学 箕面キャンパス付近
+
+            function getDistance(pos1, pos2) {
+                return Math.sqrt(Math.pow(pos1.lat - pos2.lat, 2) + Math.pow(pos1.lon - pos2.lon, 2));
+            }
+
+            function findNearest(items) {
+                let nearestItem = null;
+                let minDistance = Infinity;
+                items.forEach(item => {
+                    const distance = getDistance(currentUserPosition, item);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestItem = item;
+                    }
+                });
+                return nearestItem;
+            }
+            
+            function findNearestBuilding() {
+                const buildingsWithCoords = {};
+                mockClassrooms.forEach(room => {
+                    if (!buildingsWithCoords[room.building]) {
+                        buildingsWithCoords[room.building] = { name: room.building, lat: room.lat, lon: room.lon };
+                    }
+                });
+                const nearest = findNearest(Object.values(buildingsWithCoords));
+                return nearest ? nearest.name : null;
+            }
 
             // --- 大学選択モーダル関連 ---
             function openUniversityModal() {
@@ -642,10 +956,10 @@
                 fullUniversityList.innerHTML = '';
                 mockUniversities.forEach(uni => {
                     const li = document.createElement('li');
-                    const isSelected = uni === selectedUniversity;
-                    li.className = `p-2 hover:bg-slate-100 rounded cursor-pointer ${isSelected ? 'selected font-bold text-slate-800' : 'text-slate-700'}`;
-                    li.textContent = uni;
-                    li.dataset.university = uni;
+                    const isSelected = uni.name === selectedUniversity;
+                    li.className = `p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${isSelected ? 'selected font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`;
+                    li.textContent = uni.name;
+                    li.dataset.university = uni.name;
                     fullUniversityList.appendChild(li);
                 });
             }
@@ -667,10 +981,20 @@
             }
             
             function handleLocationSelect() {
-                const targetUniversity = "大阪大学";
-                showToast(`現在地から${targetUniversity}を適用しました`);
-                selectedUniversity = targetUniversity;
-                selectedUniversityName.textContent = selectedUniversity;
+                const nearestUniversity = findNearest(mockUniversities);
+                if (nearestUniversity) {
+                    selectedUniversity = nearestUniversity.name;
+                    selectedUniversityName.textContent = selectedUniversity;
+                    const nearestBuilding = findNearestBuilding();
+                    if (nearestBuilding) {
+                        showToast(`現在地から${selectedUniversity}、${nearestBuilding}を適用しました`);
+                        selectedBuildings.clear();
+                        selectedBuildings.add(nearestBuilding);
+                        updateBuildingTagsUI();
+                    } else {
+                         showToast(`現在地から${selectedUniversity}を適用しました`);
+                    }
+                }
             }
 
             // --- 建物選択モーダル関連 ---
@@ -686,12 +1010,11 @@
                     const isSelected = selectedBuildings.has(building);
                     li.className = `rounded-md transition-colors ${isSelected ? 'selected' : ''}`;
                     li.innerHTML = `
-                        <label class="flex items-center space-x-3 p-2 cursor-pointer hover:bg-slate-100 rounded-md">
-                            <input type="checkbox" data-building="${building}" class="form-checkbox h-5 w-5 text-slate-600 border-slate-300 rounded focus:ring-slate-500" ${isSelected ? 'checked' : ''}>
-                            <span class="text-slate-700">${building}</span>
+                        <label class="flex items-center space-x-3 p-2 cursor-pointer hover:bg-[var(--bg-secondary)] rounded-md">
+                            <input type="checkbox" data-building="${building}" class="form-checkbox h-5 w-5 text-stone-600 border-stone-300 rounded focus:ring-stone-500" ${isSelected ? 'checked' : ''}>
+                            <span class="text-[var(--text-primary)]">${building}</span>
                         </label>
                     `;
-                    fullBuildingList.appendChild(li);
                 });
             }
 
@@ -729,7 +1052,7 @@
                          const existingTag = buildingFilterContainer.querySelector(`[data-building="${building}"]`);
                          if (!existingTag) {
                             const newTag = document.createElement('button');
-                            newTag.className = 'building-tag dynamic-tag flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-slate-600';
+                            newTag.className = 'building-tag dynamic-tag flex-shrink-0 border border-stone-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-stone-600';
                             newTag.dataset.building = building;
                             newTag.textContent = building;
                             moreBuildingsBtn.before(newTag);
@@ -742,6 +1065,126 @@
                     tag.classList.toggle('active', selectedBuildings.has(buildingName));
                 });
             }
+            
+            // --- レビューページ関連 ---
+            function openReviewUniversityModal() {
+                populateReviewUniversityList();
+                reviewUniversityModal.classList.remove('hidden');
+            }
+            function populateReviewUniversityList() {
+                 fullReviewUniversityList.innerHTML = '';
+                mockUniversities.forEach(uni => {
+                    const li = document.createElement('li');
+                    const isSelected = uni.name === reviewState.university;
+                    li.className = `p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${isSelected ? 'selected font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`;
+                    li.textContent = uni.name;
+                    li.dataset.university = uni.name;
+                    fullReviewUniversityList.appendChild(li);
+                });
+            }
+            function filterReviewUniversityList() {
+                const query = reviewUniversitySearchInput.value.toLowerCase();
+                fullReviewUniversityList.querySelectorAll('li').forEach(item => {
+                    item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+                });
+            }
+            function handleReviewUniversitySelect(e) {
+                if (e.target.tagName !== 'LI') return;
+                reviewState.university = e.target.dataset.university;
+                reviewSelectedUniversityName.textContent = reviewState.university;
+                reviewState.building = null;
+                reviewSelectedBuildingName.textContent = '建物を選択...';
+                reviewState.classroom = null;
+                reviewSelectedClassroomName.textContent = '教室を選択...';
+                reviewUniversityModal.classList.add('hidden');
+            }
+             function handleReviewLocationUniversity() {
+                const nearest = findNearest(mockUniversities);
+                if (nearest) {
+                    reviewState.university = nearest.name;
+                    reviewSelectedUniversityName.textContent = reviewState.university;
+                    showToast(`現在地から${reviewState.university}を選択しました`);
+                }
+            }
+
+            function openReviewBuildingModal() {
+                if (!reviewState.university) {
+                    showToast('先に大学を選択してください', true);
+                    return;
+                }
+                populateReviewBuildingList();
+                reviewBuildingModal.classList.remove('hidden');
+            }
+            function populateReviewBuildingList() {
+                fullReviewBuildingList.innerHTML = '';
+                allBuildings.forEach(b => {
+                    const li = document.createElement('li');
+                     const isSelected = b === reviewState.building;
+                    li.className = `p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${isSelected ? 'selected font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`;
+                    li.textContent = b;
+                    li.dataset.building = b;
+                    fullReviewBuildingList.appendChild(li);
+                });
+            }
+            function filterReviewBuildingList() {
+                const query = reviewBuildingSearchInput.value.toLowerCase();
+                fullReviewBuildingList.querySelectorAll('li').forEach(item => {
+                    item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+                });
+            }
+             function handleReviewBuildingSelect(e) {
+                if (e.target.tagName !== 'LI') return;
+                reviewState.building = e.target.dataset.building;
+                reviewSelectedBuildingName.textContent = reviewState.building;
+                reviewState.classroom = null;
+                reviewSelectedClassroomName.textContent = '教室を選択...';
+                reviewBuildingModal.classList.add('hidden');
+            }
+            function handleReviewLocationBuilding() {
+                if (!reviewState.university) {
+                    showToast('先に大学を選択してください', true);
+                    return;
+                }
+                const nearest = findNearestBuilding();
+                if (nearest) {
+                    reviewState.building = nearest;
+                    reviewSelectedBuildingName.textContent = reviewState.building;
+                    showToast(`現在地から${reviewState.building}を選択しました`);
+                }
+            }
+
+            function openReviewClassroomModal() {
+                if (!reviewState.building) {
+                    showToast('先に建物も選択してください', true);
+                    return;
+                }
+                populateReviewClassroomList();
+                reviewClassroomModal.classList.remove('hidden');
+            }
+            function populateReviewClassroomList() {
+                fullReviewClassroomList.innerHTML = '';
+                mockClassrooms.filter(c => c.building === reviewState.building).forEach(c => {
+                    const li = document.createElement('li');
+                    const isSelected = c.name === reviewState.classroom;
+                    li.className = `p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${isSelected ? 'selected font-bold text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`;
+                    li.textContent = c.name;
+                    li.dataset.classroom = c.name;
+                    fullReviewClassroomList.appendChild(li);
+                });
+            }
+            function filterReviewClassroomList() {
+                 const query = reviewClassroomSearchInput.value.toLowerCase();
+                fullReviewClassroomList.querySelectorAll('li').forEach(item => {
+                    item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+                });
+            }
+            function handleReviewClassroomSelect(e) {
+                if (e.target.tagName !== 'LI') return;
+                reviewState.classroom = e.target.dataset.classroom;
+                reviewSelectedClassroomName.textContent = reviewState.classroom;
+                reviewClassroomModal.classList.add('hidden');
+            }
+
 
             // --- アプリケーション開始 ---
             init();
