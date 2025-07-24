@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大学空き教室検索</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f1f5f9; /* bg-slate-100 */
+        }
+        /* カスタムスタイル */
+        .day-btn.active {
+            background-color: #1e293b; /* bg-slate-800 */
+            color: white;
+            border-color: #1e293b; /* border-slate-800 */
+        }
+        .time-slot {
+            transition: background-color 0.1s ease-in-out;
+        }
+        .time-slot.selected {
+            background-color: #334155; /* bg-slate-700 */
+        }
+        .building-tag.active {
+            background-color: #334155; /* bg-slate-700 */
+            color: white;
+            border-color: #334155;
+        }
+        #full-building-list li.selected, #full-university-list li.selected {
+            background-color: #f1f5f9; /* bg-slate-100 */
+        }
+        /* トースト通知のスタイル */
+        #toast-notification {
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            transform: translateY(150%);
+            opacity: 0;
+        }
+        #toast-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        /* スクロールバーのスタイル */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* bg-slate-300 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0; /* bg-slate-200 */
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <!-- トースト通知 -->
+    <div id="toast-notification" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white py-2 px-5 rounded-lg shadow-lg z-50 flex items-center space-x-2">
+        <i id="toast-icon" class="fas fa-check-circle"></i>
+        <p id="toast-message"></p>
+    </div>
+
+    <div class="container mx-auto max-w-lg bg-white min-h-screen shadow-xl">
+        <!-- ヘッダー -->
+        <header class="bg-slate-800 text-white p-4 flex items-center justify-between shadow-md">
+            <div class="flex items-center">
+                <i class="fas fa-home text-2xl mr-3"></i>
+                <h1 class="text-xl font-bold tracking-wider">大学空き教室検索</h1>
+            </div>
+            <button id="menu-btn" class="text-2xl">
+                <i class="fas fa-bars"></i>
+            </button>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="p-4">
+            <!-- 検索項目 -->
+            <section id="search-criteria" class="bg-slate-50 p-4 rounded-lg shadow-sm mb-6">
+                <h2 class="text-lg font-semibold mb-4 flex items-center text-slate-700"><i class="fas fa-search mr-2"></i>検索項目</h2>
+                
+                <!-- 大学選択 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">大学</label>
+                    <div class="flex items-center space-x-2">
+                        <div class="relative flex-grow">
+                            <button id="university-select-btn" class="w-full text-left pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white">
+                                <span id="selected-university-name" class="text-slate-800">大学を選択...</span>
+                            </button>
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-graduation-cap text-slate-400"></i>
+                            </span>
+                        </div>
+                        <button id="location-btn" class="bg-slate-700 text-white px-4 py-2 rounded-md hover:bg-slate-800 transition-colors" aria-label="現在地から検索">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 曜日選択 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">曜日</label>
+                    <div id="day-selector" class="grid grid-cols-6 gap-2">
+                        <button data-day="1" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">月</button>
+                        <button data-day="2" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">火</button>
+                        <button data-day="3" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">水</button>
+                        <button data-day="4" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">木</button>
+                        <button data-day="5" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">金</button>
+                        <button data-day="6" class="day-btn border border-slate-300 py-2 rounded-md text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">土</button>
+                    </div>
+                </div>
+
+                <!-- 時間選択 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-600 mb-1">時間</label>
+                    <div class="bg-slate-200 p-2 rounded-lg">
+                        <div class="grid grid-cols-7 text-center text-xs text-slate-500 mb-1">
+                            <span>8:00</span><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span><span>20:00</span>
+                        </div>
+                        <div id="time-slider" class="w-full h-10 bg-white rounded-md flex border border-slate-300 cursor-pointer select-none">
+                            <!-- 30分単位で28スロット (8:00 - 22:00) -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 検索ボタン -->
+                <button id="search-btn" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-900 transition-all shadow-md flex items-center justify-center text-lg">
+                    <i class="fas fa-search mr-2"></i>さがす
+                </button>
+            </section>
+
+            <!-- 初回メッセージ -->
+            <div id="initial-message" class="text-center text-slate-500 py-8">
+                <i class="fas fa-search text-4xl mb-3"></i>
+                <p>上の条件で検索してください</p>
+            </div>
+
+            <!-- 空き教室結果 -->
+            <section id="results-section" class="hidden">
+                <h2 id="results-header-title" class="text-lg font-semibold mb-4 flex items-center text-slate-700"><i class="fas fa-chalkboard-teacher mr-2"></i>空き教室</h2>
+                
+                <!-- 建物フィルター -->
+                <div id="building-filter-container" class="mb-4 flex items-center flex-wrap gap-2">
+                    <button id="nearby-building-btn" class="flex-shrink-0 bg-slate-800 text-white px-3 py-1.5 rounded-full text-sm font-medium hover:bg-slate-900 transition-colors" aria-label="最寄りの建物を検索">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </button>
+                    <button class="building-tag active flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium" data-building="all">すべて</button>
+                    <button class="building-tag flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-slate-600" data-building="全学共通A棟">全学共通A棟</button>
+                    <button class="building-tag flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-slate-600" data-building="全学共通B棟">全学共通B棟</button>
+                    <button id="more-buildings-btn" class="flex-shrink-0 text-slate-500 font-semibold text-sm hover:underline">もっとみる ></button>
+                </div>
+
+                <!-- 結果表示エリア -->
+                <div id="results-container" class="space-y-4">
+                    <!-- 検索結果がここに挿入されます -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 大学選択モーダル -->
+    <div id="university-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-bold">大学一覧</h3>
+                <button id="close-university-modal-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto">
+                <input type="text" id="university-search-input" placeholder="大学名で検索..." class="w-full px-3 py-2 border border-slate-300 rounded-md mb-4">
+                <ul id="full-university-list" class="space-y-1">
+                    <!-- 大学リストがここに挿入されます -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 建物選択モーダル -->
+    <div id="buildings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-bold">建物一覧</h3>
+                <button id="close-buildings-modal-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto">
+                <input type="text" id="building-search-input" placeholder="建物名で検索..." class="w-full px-3 py-2 border border-slate-300 rounded-md mb-4">
+                <ul id="full-building-list" class="space-y-1">
+                    <!-- 全ての建物リストがここに挿入されます -->
+                </ul>
+            </div>
+            <div class="p-4 border-t bg-slate-50">
+                <button id="modal-done-btn" class="w-full bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-800 transition-colors">完了</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- サンプルデータ ---
+            const mockUniversities = [ "東京大学", "京都大学", "大阪大学", "早稲田大学", "慶應義塾大学", "明治大学", "法政大学", "立教大学", "中央大学", "青山学院大学", "上智大学" ];
+            const mockClassrooms = [
+                // 全学共通A棟
+                { id: 1, name: '301号室', building: '全学共通A棟', lat: 35.6812, lon: 139.7671, attributes: ['会話OK', 'コンセント有'], schedule: { 
+                    '1': [{ start: '10:40', end: '12:10' }, { start: '13:00', end: '14:30' }], // 月
+                    '3': [{ start: '09:00', end: '10:30' }, { start: '14:45', end: '16:15' }], // 水
+                    '5': [{ start: '16:30', end: '18:00' }]  // 金
+                } },
+                { id: 2, name: '102号室', building: '全学共通A棟', lat: 35.6812, lon: 139.7671, attributes: ['コンセント有'], schedule: { 
+                    '2': [{ start: '09:00', end: '12:10' }], // 火
+                    '4': [{ start: '13:00', end: '17:30' }]  // 木
+                } },
+                { id: 7, name: '103号室', building: '全学共通A棟', lat: 35.6812, lon: 139.7671, attributes: ['コンセント有'], schedule: {
+                    '1': [{ start: '09:00', end: '10:30' }, { start: '10:40', end: '12:10' }], // 月
+                    '3': [{ start: '13:00', end: '16:15' }], // 水
+                    '4': [{ start: '09:00', end: '12:10' }]  // 木
+                } },
+
+                // 全学共通B棟
+                { id: 3, name: '205号室', building: '全学共通B棟', lat: 35.6810, lon: 139.7675, attributes: [], schedule: { 
+                    '1': [{ start: '14:45', end: '16:15' }], // 月
+                    '2': [{ start: '10:40', end: '12:10' }], // 火
+                    '5': [{ start: '09:00', end: '12:10' }, { start: '13:00', end: '14:30' }] // 金
+                } },
+                { id: 8, name: '208号室', building: '全学共通B棟', lat: 35.6810, lon: 139.7675, attributes: ['会話OK'], schedule: {
+                    '2': [{ start: '13:00', end: '14:30' }], // 火
+                    '4': [{ start: '09:00', end: '10:30' }, { start: '10:40', end: '12:10' }], // 木
+                    '5': [{ start: '14:45', end: '17:00' }] // 金
+                } },
+
+                // 全学共通C棟
+                { id: 4, name: '401号室', building: '全学共通C棟', lat: 35.6815, lon: 139.7670, attributes: ['会話OK'], schedule: { 
+                    '1': [], // 月曜は終日空き
+                    '3': [{ start: '09:00', end: '12:10' }, { start: '16:30', end: '18:00' }], // 水
+                    '5': [{ start: '09:00', end: '17:00' }] // 金
+                } },
+                { id: 9, name: '303号室', building: '全学共通C棟', lat: 35.6815, lon: 139.7670, attributes: [], schedule: {
+                    '2': [{ start: '10:40', end: '12:10' }], // 火
+                    '4': [{ start: '14:45', end: '16:15' }], // 木
+                    '5': [{ start: '09:00', end: '10:30' }] // 金
+                } },
+                
+                // その他
+                { id: 5, name: '101演習室', building: '情報学部棟', lat: 35.6820, lon: 139.7680, attributes: ['コンセント有'], schedule: { 
+                    '1': [{ start: '09:00', end: '17:30' }], // 月
+                    '2': [], // 火曜は終日空き
+                    '3': [{ start: '13:00', end: '15:00' }], // 水
+                    '4': [{ start: '09:00', end: '12:10' }]  // 木
+                } },
+                { id: 6, name: '大会議室', building: '本部棟', lat: 35.6800, lon: 139.7660, attributes: ['会話OK', 'コンセント有'], schedule: { 
+                    '1': [{ start: '10:00', end: '11:00' }], // 月
+                    '2': [{ start: '14:00', end: '17:00' }], // 火
+                    '3': [{ start: '08:00', end: '22:00' }], // 水 (終日利用不可)
+                    '4': [{ start: '10:00', end: '12:00' }], // 木
+                    '5': [{ start: '13:00', end: '18:00' }]  // 金
+                } },
+                { id: 10, name: 'LL教室', building: '語学センター', lat: 35.6822, lon: 139.7678, attributes: ['コンセント有'], schedule: { 
+                    '1': [{ start: '13:00', end: '14:30' }], // 月
+                    '2': [{ start: '10:40', end: '12:10' }], // 火
+                    '3': [{ start: '14:45', end: '16:15' }], // 水
+                    '4': [{ start: '09:00', end: '10:30' }, { start: '16:30', end: '18:00' }], // 木
+                    '5': [] // 金曜は終日空き
+                } },
+            ];
+            const allBuildings = [...new Set(mockClassrooms.map(c => c.building))];
+
+            // --- DOM要素 ---
+            const toastNotification = document.getElementById('toast-notification');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+            const universitySelectBtn = document.getElementById('university-select-btn');
+            const selectedUniversityName = document.getElementById('selected-university-name');
+            const universityModal = document.getElementById('university-modal');
+            const closeUniversityModalBtn = document.getElementById('close-university-modal-btn');
+            const universitySearchInput = document.getElementById('university-search-input');
+            const fullUniversityList = document.getElementById('full-university-list');
+            const locationBtn = document.getElementById('location-btn');
+            const daySelector = document.getElementById('day-selector');
+            const timeSlider = document.getElementById('time-slider');
+            const searchBtn = document.getElementById('search-btn');
+            const initialMessage = document.getElementById('initial-message');
+            const resultsSection = document.getElementById('results-section');
+            const resultsHeaderTitle = document.getElementById('results-header-title');
+            const resultsContainer = document.getElementById('results-container');
+            const buildingFilterContainer = document.getElementById('building-filter-container');
+            const nearbyBuildingBtn = document.getElementById('nearby-building-btn');
+            const moreBuildingsBtn = document.getElementById('more-buildings-btn');
+            const buildingsModal = document.getElementById('buildings-modal');
+            const closeBuildingsModalBtn = document.getElementById('close-buildings-modal-btn');
+            const modalDoneBtn = document.getElementById('modal-done-btn');
+            const fullBuildingList = document.getElementById('full-building-list');
+            const buildingSearchInput = document.getElementById('building-search-input');
+
+            // --- 状態管理 ---
+            let selectedUniversity = "東京大学";
+            let selectedDays = new Set();
+            let selectedTimeSlots = new Set();
+            let isDragging = false;
+            let dragStartSlot = -1;
+            let selectedBuildings = new Set(['all']);
+            let toastTimeout;
+
+            // --- 初期化処理 ---
+            const init = () => {
+                selectedUniversityName.textContent = selectedUniversity;
+
+                for (let i = 0; i < 28; i++) {
+                    const slot = document.createElement('div');
+                    slot.classList.add('time-slot', 'flex-1', 'border-r', 'border-slate-300', 'last:border-r-0');
+                    timeSlider.appendChild(slot);
+                }
+                const today = new Date().getDay();
+                const todayBtn = daySelector.querySelector(`[data-day="${today === 0 ? 1 : today}"]`);
+                if (todayBtn) {
+                    todayBtn.classList.add('active');
+                    selectedDays.add(todayBtn.dataset.day);
+                }
+                setupEventListeners();
+            };
+
+            // --- イベントリスナー設定 ---
+            const setupEventListeners = () => {
+                universitySelectBtn.addEventListener('click', openUniversityModal);
+                closeUniversityModalBtn.addEventListener('click', () => universityModal.classList.add('hidden'));
+                universitySearchInput.addEventListener('input', filterUniversityList);
+                fullUniversityList.addEventListener('click', handleUniversitySelect);
+                locationBtn.addEventListener('click', handleLocationSelect);
+
+                daySelector.addEventListener('click', handleDaySelect);
+                
+                // マウスイベント
+                timeSlider.addEventListener('mousedown', (e) => startDrag(e));
+                timeSlider.addEventListener('mousemove', (e) => duringDrag(e));
+                document.addEventListener('mouseup', endDrag);
+                
+                // タッチイベント
+                timeSlider.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    startDrag(e.touches[0]);
+                }, { passive: false });
+                timeSlider.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    duringDrag(e.touches[0]);
+                }, { passive: false });
+                document.addEventListener('touchend', endDrag);
+
+                searchBtn.addEventListener('click', () => handleSearch(true));
+                buildingFilterContainer.addEventListener('click', (e) => {
+                    handleBuildingFilter(e);
+                    handleSearch(false);
+                });
+                nearbyBuildingBtn.addEventListener('click', () => {
+                    handleSelectNearbyBuilding();
+                    handleSearch(true);
+                });
+                moreBuildingsBtn.addEventListener('click', openBuildingsModal);
+                closeBuildingsModalBtn.addEventListener('click', () => buildingsModal.classList.add('hidden'));
+                modalDoneBtn.addEventListener('click', handleModalDone);
+                buildingSearchInput.addEventListener('input', filterBuildingList);
+            };
+
+            // --- UIヘルパー ---
+            function showToast(message, isError = false) {
+                clearTimeout(toastTimeout);
+                toastMessage.textContent = message;
+                
+                toastNotification.classList.remove('bg-green-500', 'bg-slate-800', 'bg-red-500');
+                toastIcon.classList.remove('fa-check-circle', 'fa-exclamation-triangle');
+
+                if (isError) {
+                    toastNotification.classList.add('bg-red-500');
+                    toastIcon.classList.add('fa-exclamation-triangle');
+                } else {
+                    toastNotification.classList.add('bg-slate-800');
+                    toastIcon.classList.add('fa-check-circle');
+                }
+
+                toastNotification.classList.add('show');
+                toastTimeout = setTimeout(() => {
+                    toastNotification.classList.remove('show');
+                }, 2500);
+            }
+
+            // --- UIイベントハンドラ ---
+            function handleDaySelect(e) {
+                if (!e.target.classList.contains('day-btn')) return;
+                const btn = e.target;
+                const day = btn.dataset.day;
+                btn.classList.toggle('active');
+                selectedDays.has(day) ? selectedDays.delete(day) : selectedDays.add(day);
+            }
+
+            function getSlotIndexFromEvent(e) {
+                const rect = timeSlider.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const slotWidth = rect.width / 28;
+                return Math.floor(x / slotWidth);
+            }
+
+            function startDrag(e) {
+                isDragging = true;
+                selectedTimeSlots.clear();
+                const index = getSlotIndexFromEvent(e);
+                dragStartSlot = index;
+                selectedTimeSlots.add(index);
+                updateSliderUI();
+            }
+
+            function duringDrag(e) {
+                if (!isDragging) return;
+                const currentIndex = getSlotIndexFromEvent(e);
+                selectedTimeSlots.clear();
+                const start = Math.min(dragStartSlot, currentIndex);
+                const end = Math.max(dragStartSlot, currentIndex);
+                for (let i = start; i <= end; i++) {
+                    selectedTimeSlots.add(i);
+                }
+                updateSliderUI();
+            }
+
+            function endDrag() {
+                isDragging = false;
+                dragStartSlot = -1;
+            }
+
+            function updateSliderUI() {
+                const slots = timeSlider.querySelectorAll('.time-slot');
+                slots.forEach((slot, i) => {
+                    slot.classList.toggle('selected', selectedTimeSlots.has(i));
+                });
+            }
+
+            function handleBuildingFilter(e) {
+                if (!e.target.classList.contains('building-tag')) return;
+                const clickedTag = e.target;
+                const buildingName = clickedTag.dataset.building;
+                
+                if (buildingName === 'all') {
+                    selectedBuildings.clear();
+                    selectedBuildings.add('all');
+                } else {
+                    selectedBuildings.delete('all');
+                    if (selectedBuildings.has(buildingName)) {
+                        selectedBuildings.delete(buildingName);
+                    } else {
+                        selectedBuildings.add(buildingName);
+                    }
+                    if (selectedBuildings.size === 0) {
+                        selectedBuildings.add('all');
+                    }
+                }
+                updateBuildingTagsUI();
+            }
+
+            function handleSelectNearbyBuilding() {
+                const currentUserPosition = { lat: 35.6813, lon: 139.7672 };
+                let nearestBuilding = null;
+                let minDistance = Infinity;
+                const buildingsWithCoords = {};
+                mockClassrooms.forEach(room => {
+                    if (!buildingsWithCoords[room.building]) {
+                        buildingsWithCoords[room.building] = { lat: room.lat, lon: room.lon };
+                    }
+                });
+                for (const building in buildingsWithCoords) {
+                    const pos = buildingsWithCoords[building];
+                    const distance = Math.pow(currentUserPosition.lat - pos.lat, 2) + Math.pow(currentUserPosition.lon - pos.lon, 2);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestBuilding = building;
+                    }
+                }
+                if (nearestBuilding) {
+                    showToast(`現在地から${nearestBuilding}を適用しました`);
+                    selectedBuildings.delete('all');
+                    selectedBuildings.add(nearestBuilding);
+                    updateBuildingTagsUI();
+                } else {
+                    showToast('最寄りの建物を特定できませんでした。', true);
+                }
+            }
+
+            // --- 検索と描画 ---
+            function runSearchLogic() {
+                const searchStartTime = 8 + (Math.min(...selectedTimeSlots) * 0.5);
+                const searchEndTime = 8 + ((Math.max(...selectedTimeSlots) + 1) * 0.5);
+                const availableRooms = mockClassrooms.filter(room => {
+                    if (!selectedBuildings.has('all') && !selectedBuildings.has(room.building)) {
+                        return false;
+                    }
+                    for (const day of selectedDays) {
+                        const scheduleForDay = room.schedule[day] || [];
+                        const isBusy = scheduleForDay.some(slot => {
+                            const slotStart = timeToHours(slot.start);
+                            const slotEnd = timeToHours(slot.end);
+                            return Math.max(searchStartTime, slotStart) < Math.min(searchEndTime, slotEnd);
+                        });
+                        if (!isBusy) return true;
+                    }
+                    return false;
+                });
+                availableRooms.sort((a, b) => a.building.localeCompare(b.building) || a.name.localeCompare(b.name));
+                renderResults(availableRooms);
+            }
+
+            function handleSearch(showLoading) {
+                if (selectedDays.size === 0 || selectedTimeSlots.size === 0) {
+                    showToast('曜日と時間を選択してください', true);
+                    return;
+                }
+
+                initialMessage.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+
+                if (showLoading) {
+                    resultsHeaderTitle.classList.add('hidden');
+                    buildingFilterContainer.classList.add('hidden');
+                    resultsContainer.innerHTML = `
+                        <div class="text-center text-slate-500 py-8">
+                            <i class="fas fa-spinner fa-spin text-4xl mb-3"></i>
+                            <p>空き教室を検索中...</p>
+                        </div>
+                    `;
+                    setTimeout(() => {
+                        runSearchLogic();
+                    }, 1000);
+                } else {
+                    runSearchLogic();
+                }
+            }
+
+            function renderResults(rooms) {
+                resultsHeaderTitle.classList.remove('hidden');
+                buildingFilterContainer.classList.remove('hidden');
+                
+                resultsContainer.innerHTML = '';
+                if (rooms.length === 0) {
+                    resultsContainer.innerHTML = `<div class="text-center text-slate-500 py-8"><i class="fas fa-ghost text-4xl mb-3"></i><p>条件に合う空き教室はありませんでした。</p></div>`;
+                    return;
+                }
+                rooms.forEach(room => {
+                    const card = createClassroomCard(room);
+                    resultsContainer.appendChild(card);
+                });
+            }
+
+            function createClassroomCard(room) {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-lg shadow-sm border border-slate-200';
+                const tagsHTML = room.attributes.map(attr => {
+                    const icon = attr === '会話OK' ? 'fa-comments' : 'fa-plug';
+                    const color = attr === '会話OK' ? 'bg-slate-200 text-slate-800' : 'bg-slate-200 text-slate-800';
+                    return `<span class="text-xs font-medium px-2.5 py-0.5 rounded-full ${color}"><i class="fas ${icon} mr-1"></i>${attr}</span>`;
+                }).join(' ');
+                
+                let availableDay = null;
+                for (const day of selectedDays) {
+                    const scheduleForDay = room.schedule[day] || [];
+                    const searchStartTime = 8 + (Math.min(...selectedTimeSlots) * 0.5);
+                    const searchEndTime = 8 + ((Math.max(...selectedTimeSlots) + 1) * 0.5);
+                    const isBusy = scheduleForDay.some(slot => {
+                        const slotStart = timeToHours(slot.start);
+                        const slotEnd = timeToHours(slot.end);
+                        return Math.max(searchStartTime, slotStart) < Math.min(searchEndTime, slotEnd);
+                    });
+                    if (!isBusy) {
+                        availableDay = day;
+                        break;
+                    }
+                }
+
+                const daySchedule = room.schedule[availableDay] || [];
+                const freeSlotsHTML = generateFreeSlotsTimeline(daySchedule);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs font-semibold text-slate-500">${room.building}</span>
+                            <h3 class="text-2xl font-bold text-slate-800">${room.name}</h3>
+                        </div>
+                        <div class="flex space-x-2">${tagsHTML}</div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="flex justify-between text-xs text-slate-500"><span>8:00</span><span>22:00</span></div>
+                        <div class="w-full h-6 bg-slate-200 rounded-md flex relative overflow-hidden">
+                            ${freeSlotsHTML}
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1 text-right">空き時間（${['日','月','火','水','木','金','土'][availableDay]}曜）</p>
+                    </div>`;
+                return card;
+            }
+
+            function generateFreeSlotsTimeline(schedule) {
+                const dayStart = 8 * 60;
+                const dayEnd = 22 * 60;
+                const totalMinutes = dayEnd - dayStart;
+                const busySlots = schedule.map(slot => ({ start: timeToMinutes(slot.start), end: timeToMinutes(slot.end) })).sort((a, b) => a.start - b.start);
+                let freeSlotsHTML = '';
+                let lastBusyEnd = dayStart;
+                busySlots.forEach(busySlot => {
+                    if (busySlot.start > lastBusyEnd) {
+                        const freeStart = lastBusyEnd;
+                        const freeEnd = busySlot.start;
+                        const left = ((freeStart - dayStart) / totalMinutes) * 100;
+                        const width = ((freeEnd - freeStart) / totalMinutes) * 100;
+                        freeSlotsHTML += `<div class="absolute h-full bg-slate-500" style="left: ${left}%; width: ${width}%;"></div>`;
+                    }
+                    lastBusyEnd = Math.max(lastBusyEnd, busySlot.end);
+                });
+                if (lastBusyEnd < dayEnd) {
+                    const freeStart = lastBusyEnd;
+                    const freeEnd = dayEnd;
+                    const left = ((freeStart - dayStart) / totalMinutes) * 100;
+                    const width = ((freeEnd - freeStart) / totalMinutes) * 100;
+                    freeSlotsHTML += `<div class="absolute h-full bg-slate-500" style="left: ${left}%; width: ${width}%;"></div>`;
+                }
+                if (busySlots.length === 0) {
+                     freeSlotsHTML = `<div class="absolute h-full bg-slate-500" style="left: 0%; width: 100%;"></div>`;
+                }
+                return freeSlotsHTML;
+            }
+
+            function timeToHours(timeStr) {
+                const [h, m] = timeStr.split(':').map(Number);
+                return h + m / 60;
+            }
+            
+            function timeToMinutes(timeStr) {
+                const [h, m] = timeStr.split(':').map(Number);
+                return h * 60 + m;
+            }
+
+            // --- 大学選択モーダル関連 ---
+            function openUniversityModal() {
+                populateUniversityList();
+                universityModal.classList.remove('hidden');
+            }
+
+            function populateUniversityList() {
+                fullUniversityList.innerHTML = '';
+                mockUniversities.forEach(uni => {
+                    const li = document.createElement('li');
+                    const isSelected = uni === selectedUniversity;
+                    li.className = `p-2 hover:bg-slate-100 rounded cursor-pointer ${isSelected ? 'selected font-bold text-slate-800' : 'text-slate-700'}`;
+                    li.textContent = uni;
+                    li.dataset.university = uni;
+                    fullUniversityList.appendChild(li);
+                });
+            }
+
+            function filterUniversityList() {
+                const query = universitySearchInput.value.toLowerCase();
+                const items = fullUniversityList.querySelectorAll('li');
+                items.forEach(item => {
+                    const uniName = item.textContent.toLowerCase();
+                    item.style.display = uniName.includes(query) ? '' : 'none';
+                });
+            }
+
+            function handleUniversitySelect(e) {
+                if (e.target.tagName !== 'LI') return;
+                selectedUniversity = e.target.dataset.university;
+                selectedUniversityName.textContent = selectedUniversity;
+                universityModal.classList.add('hidden');
+            }
+            
+            function handleLocationSelect() {
+                const targetUniversity = "大阪大学";
+                showToast(`現在地から${targetUniversity}を適用しました`);
+                selectedUniversity = targetUniversity;
+                selectedUniversityName.textContent = selectedUniversity;
+            }
+
+            // --- 建物選択モーダル関連 ---
+            function openBuildingsModal() {
+                populateBuildingList();
+                buildingsModal.classList.remove('hidden');
+            }
+
+            function populateBuildingList() {
+                fullBuildingList.innerHTML = '';
+                allBuildings.forEach(building => {
+                    const li = document.createElement('li');
+                    const isSelected = selectedBuildings.has(building);
+                    li.className = `rounded-md transition-colors ${isSelected ? 'selected' : ''}`;
+                    li.innerHTML = `
+                        <label class="flex items-center space-x-3 p-2 cursor-pointer hover:bg-slate-100 rounded-md">
+                            <input type="checkbox" data-building="${building}" class="form-checkbox h-5 w-5 text-slate-600 border-slate-300 rounded focus:ring-slate-500" ${isSelected ? 'checked' : ''}>
+                            <span class="text-slate-700">${building}</span>
+                        </label>
+                    `;
+                    fullBuildingList.appendChild(li);
+                });
+            }
+
+            function filterBuildingList() {
+                const query = buildingSearchInput.value.toLowerCase();
+                const items = fullBuildingList.querySelectorAll('li');
+                items.forEach(item => {
+                    const buildingName = item.querySelector('span').textContent.toLowerCase();
+                    item.style.display = buildingName.includes(query) ? '' : 'none';
+                });
+            }
+
+            function handleModalDone() {
+                const newSelections = new Set();
+                const checkboxes = fullBuildingList.querySelectorAll('input[type="checkbox"]:checked');
+                checkboxes.forEach(cb => newSelections.add(cb.dataset.building));
+                
+                selectedBuildings = newSelections;
+                if (selectedBuildings.size === 0) {
+                    selectedBuildings.add('all');
+                }
+
+                updateBuildingTagsUI();
+                buildingsModal.classList.add('hidden');
+                handleSearch(true);
+            }
+
+            function updateBuildingTagsUI() {
+                buildingFilterContainer.querySelectorAll('.dynamic-tag').forEach(tag => tag.remove());
+                
+                const defaultTags = new Set(['all', '全学共通A棟', '全学共通B棟']);
+
+                selectedBuildings.forEach(building => {
+                    if (building !== 'all' && !defaultTags.has(building)) {
+                         const existingTag = buildingFilterContainer.querySelector(`[data-building="${building}"]`);
+                         if (!existingTag) {
+                            const newTag = document.createElement('button');
+                            newTag.className = 'building-tag dynamic-tag flex-shrink-0 border border-slate-300 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-slate-600';
+                            newTag.dataset.building = building;
+                            newTag.textContent = building;
+                            moreBuildingsBtn.before(newTag);
+                         }
+                    }
+                });
+
+                buildingFilterContainer.querySelectorAll('.building-tag').forEach(tag => {
+                    const buildingName = tag.dataset.building;
+                    tag.classList.toggle('active', selectedBuildings.has(buildingName));
+                });
+            }
+
+            // --- アプリケーション開始 ---
+            init();
+        });
+    </script>
+</body>
+</html>
