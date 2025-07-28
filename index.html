@@ -13,7 +13,7 @@
         :root {
             --bg-primary: #fffffc;
             --bg-secondary: #ffffff;
-            --bg-tertiary: #e7e5e4;
+            --bg-tertiary: #f5f5f4; /* Changed to a lighter, warmer grey */
             --text-primary: #292524;
             --text-secondary: #57534e;
             --text-tertiary: #a8a29e;
@@ -30,7 +30,6 @@
             --time-slot-border: #d6d3d1;
             --timeline-bg: #e7e5e4;
             --timeline-bar-bg: #292524;
-            --card-bg: #e7e5e4;
             --attribute-tag-bg: #fffffc;
             --attribute-tag-text: var(--text-primary);
             --attribute-tag-border: transparent;
@@ -56,7 +55,6 @@
             --time-slot-border: #57534e;
             --timeline-bg: #44403c;
             --timeline-bar-bg: #fb923c;
-            --card-bg: #44403c;
             --attribute-tag-bg: transparent;
             --attribute-tag-text: var(--text-primary);
             --attribute-tag-border: var(--text-tertiary);
@@ -266,7 +264,7 @@
 
                 <section id="results-section" class="hidden">
                     <h2 id="results-header-title" class="text-lg font-semibold mb-4 flex items-center text-[var(--text-primary)] px-4"><i class="fas fa-chalkboard-teacher mr-2"></i>空き教室</h2>
-                    <div id="results-container" class="space-y-4"></div>
+                    <div id="results-container" class="space-y-4 px-4"></div>
                 </section>
             </div>
 
@@ -443,13 +441,13 @@
             <nav>
                 <ul>
                     <li class="mb-4">
-                        <a href="#" id="how-to-use-link" class="flex items-center p-2 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)] transition-colors">
+                        <a href="#" id="how-to-use-link" class="flex items-center p-2 rounded-md hover:bg-[#44403c] transition-colors">
                             <i class="fas fa-lightbulb w-6 text-center mr-3"></i>
                             <span>使い方</span>
                         </a>
                     </li>
                     <li class="mb-4">
-                        <a href="#" id="review-link" class="flex items-center p-2 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)] transition-colors">
+                        <a href="#" id="review-link" class="flex items-center p-2 rounded-md hover:bg-[#44403c] transition-colors">
                             <i class="fas fa-comment-dots w-6 text-center mr-3"></i>
                             <span>教室レビュー</span>
                         </a>
@@ -460,9 +458,9 @@
                             <span>モード</span>
                         </div>
                          <div class="mt-2 pl-8 space-y-2">
-                            <button data-theme="light" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)]">ライト</button>
-                            <button data-theme="dark" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)]">ダーク</button>
-                            <button data-theme="system" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--tag-active-text)]">システム</button>
+                            <button data-theme="light" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[#44403c]">ライト</button>
+                            <button data-theme="dark" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[#44403c]">ダーク</button>
+                            <button data-theme="system" class="theme-btn w-full text-left p-1 rounded-md hover:bg-[#44403c]">システム</button>
                         </div>
                     </li>
                 </ul>
@@ -672,17 +670,17 @@
                 
                 // Time slider and handle drag events
                 timeSlider.addEventListener('mousedown', (e) => startDrag(e));
-                startHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); activeHandle = 'start'; });
-                endHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); activeHandle = 'end'; });
+                startHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); activeHandle = 'start'; isDragging = true; });
+                endHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); activeHandle = 'end'; isDragging = true; });
                 
                 document.addEventListener('mousemove', (e) => duringDrag(e));
                 document.addEventListener('mouseup', endDrag);
                 
                 timeSlider.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e.touches[0]); }, { passive: false });
-                startHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); activeHandle = 'start'; }, { passive: false });
-                endHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); activeHandle = 'end'; }, { passive: false });
+                startHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); activeHandle = 'start'; isDragging = true; }, { passive: false });
+                endHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); activeHandle = 'end'; isDragging = true; }, { passive: false });
                 
-                document.addEventListener('touchmove', (e) => { if (activeHandle) e.preventDefault(); duringDrag(e.touches[0]); }, { passive: false });
+                document.addEventListener('touchmove', (e) => { if (isDragging) { e.preventDefault(); duringDrag(e.touches[0]); } }, { passive: false });
                 document.addEventListener('touchend', endDrag);
 
                 searchBtn.addEventListener('click', () => handleSearch(true));
@@ -860,8 +858,9 @@
             }
 
             function getSlotIndexFromEvent(e) {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const rect = timeSlider.getBoundingClientRect();
-                const x = e.clientX - rect.left;
+                const x = clientX - rect.left;
                 const slotWidth = rect.width / 48; // 48 slots for 15-min intervals
                 let index = Math.floor(x / slotWidth);
                 return Math.max(0, Math.min(47, index)); // Clamp between 0 and 47
@@ -879,18 +878,11 @@
             }
 
             function duringDrag(e) {
-                if (!isDragging && !activeHandle) return;
+                if (!isDragging) return;
                 
                 const currentIndex = getSlotIndexFromEvent(e);
 
-                if (isDragging) { // Creating a new selection
-                    selectedTimeSlots.clear();
-                    const start = Math.min(dragStartSlot, currentIndex);
-                    const end = Math.max(dragStartSlot, currentIndex);
-                    for (let i = start; i <= end; i++) {
-                        selectedTimeSlots.add(i);
-                    }
-                } else if (activeHandle) { // Adjusting an existing selection
+                if (activeHandle) { // Adjusting an existing selection
                     const slots = [...selectedTimeSlots].sort((a, b) => a - b);
                     let minSlot = slots[0];
                     let maxSlot = slots[slots.length - 1];
@@ -903,6 +895,13 @@
                     
                     selectedTimeSlots.clear();
                     for (let i = minSlot; i <= maxSlot; i++) {
+                        selectedTimeSlots.add(i);
+                    }
+                } else { // Creating a new selection
+                    selectedTimeSlots.clear();
+                    const start = Math.min(dragStartSlot, currentIndex);
+                    const end = Math.max(dragStartSlot, currentIndex);
+                    for (let i = start; i <= end; i++) {
                         selectedTimeSlots.add(i);
                     }
                 }
@@ -1084,7 +1083,7 @@
 
             function createClassroomCard(room) {
                 const card = document.createElement('div');
-                card.className = 'bg-[var(--card-bg)] p-4 rounded-lg shadow-sm border border-[var(--border-color)]';
+                card.className = 'bg-[var(--bg-tertiary)] p-4 rounded-lg shadow-sm border border-[var(--border-color)]';
                 const tagsHTML = room.attributes.map(attr => {
                     const icon = attr === '会話OK' ? 'fa-comments' : 'fa-plug';
                     return `<span class="attribute-tag text-xs font-medium px-2.5 py-0.5 rounded-full"><i class="fas ${icon} mr-1"></i>${attr}</span>`;
