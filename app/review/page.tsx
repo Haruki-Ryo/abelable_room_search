@@ -8,6 +8,11 @@ import { mockUniversities, mockClassrooms } from "../lib/data";
 
 type University = (typeof mockUniversities)[0];
 
+// ユークリッド距離で最寄りを判定
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  return Math.sqrt(Math.pow(lat1 - lat2, 2) + Math.pow(lon1 - lon2, 2));
+}
+
 export default function ReviewPage() {
   const [isUniversityModalOpen, setIsUniversityModalOpen] = useState(false);
   const [isBuildingModalOpen, setIsBuildingModalOpen] = useState(false);
@@ -71,14 +76,35 @@ export default function ReviewPage() {
   );
 
   const handleLocationUniversity = () => {
-    // 現在地から最寄りの大学を選択する機能（モック）
-    if (mockUniversities.length > 0) {
-      const nearest = mockUniversities[0]; // 最初の大学を最寄りとして扱う
-      setSelectedUniversity(nearest);
-      setSelectedBuilding(null);
-      setSelectedClassroom(null);
-      showToast(`現在地から${nearest.name}を選択しました`);
+    if (!navigator.geolocation) {
+      showToast("位置情報取得がサポートされていません", true);
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        let nearest = null;
+        let minDist = Infinity;
+        for (const u of mockUniversities) {
+          if (u.lat && u.lon) {
+            const dist = getDistance(latitude, longitude, u.lat, u.lon);
+            if (dist < minDist) {
+              minDist = dist;
+              nearest = u;
+            }
+          }
+        }
+        if (nearest) {
+          setSelectedUniversity(nearest);
+          setSelectedBuilding(null);
+          setSelectedClassroom(null);
+          showToast(`現在地から${nearest.name}を選択しました`);
+        } else {
+          showToast("最寄りの大学が見つかりません", true);
+        }
+      },
+      () => showToast("位置情報の取得に失敗しました", true),
+    );
   };
 
   const handleLocationBuilding = () => {
@@ -86,13 +112,41 @@ export default function ReviewPage() {
       showToast("先に大学を選択してください", true);
       return;
     }
-    // 現在地から最寄りの建物を選択する機能（モック）
-    if (buildings.length > 0) {
-      const nearest = buildings[0]; // 最初の建物を最寄りとして扱う
-      setSelectedBuilding(nearest);
-      setSelectedClassroom(null);
-      showToast(`現在地から${nearest}を選択しました`);
+    if (!navigator.geolocation) {
+      showToast("位置情報取得がサポートされていません", true);
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const buildings = mockClassrooms
+          .filter((c) => c.university === selectedUniversity.name)
+          .map((c) => ({ name: c.building, lat: c.lat, lon: c.lon }));
+        // 重複除去
+        const uniqueBuildings = Array.from(
+          new Map(buildings.map((b) => [b.name, b])).values(),
+        );
+        let nearest = null;
+        let minDist = Infinity;
+        for (const b of uniqueBuildings) {
+          if (b.lat && b.lon) {
+            const dist = getDistance(latitude, longitude, b.lat, b.lon);
+            if (dist < minDist) {
+              minDist = dist;
+              nearest = b;
+            }
+          }
+        }
+        if (nearest) {
+          setSelectedBuilding(nearest.name);
+          setSelectedClassroom(null);
+          showToast(`現在地から${nearest.name}を選択しました`);
+        } else {
+          showToast("最寄りの建物が見つかりません", true);
+        }
+      },
+      () => showToast("位置情報の取得に失敗しました", true),
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
