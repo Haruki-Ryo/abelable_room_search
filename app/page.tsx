@@ -14,139 +14,215 @@ type University = (typeof mockUniversities)[0];
 type Classroom = (typeof mockClassrooms)[0];
 
 interface TimeSliderProps {
-  value: { start: number; end: number };
-  onChange: (value: { start: number; end: number }) => void;
+  selectedSlots: Set<number>;
+  onChange: (slots: Set<number>) => void;
 }
 
-// Time Slider Component
-const TimeSlider: React.FC<TimeSliderProps> = ({ value, onChange }) => {
+// Time Slider Component (HTMLファイル完全再現版)
+const TimeSlider: React.FC<TimeSliderProps> = ({ selectedSlots, onChange }) => {
   const sliderRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState<boolean | "start" | "end">(
-    false,
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartSlot, setDragStartSlot] = useState(-1);
+  const [activeHandle, setActiveHandle] = useState<"start" | "end" | null>(
+    null,
   );
 
-  const totalMinutes = (21 - 8) * 60;
-  const totalSteps = totalMinutes / 15;
-
-  const valueToPercentage = (val: number) => ((val - 8 * 4) / totalSteps) * 100;
-
-  const handleInteraction = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!sliderRef.current) return;
-    const rect = sliderRef.current.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const x = clientX - rect.left;
-    let percentage = (x / rect.width) * 100;
-    percentage = Math.max(0, Math.min(100, percentage));
-
-    const newStep = Math.round((percentage / 100) * totalSteps);
-    const newValue = newStep + 8 * 4;
-
-    if (isDragging === "start") {
-      if (newValue < value.end) onChange({ ...value, start: newValue });
-    } else if (isDragging === "end") {
-      if (newValue > value.start) onChange({ ...value, end: newValue });
-    } else {
-      // If not dragging, decide which handle to move
-      if (Math.abs(newValue - value.start) < Math.abs(newValue - value.end)) {
-        if (newValue < value.end) onChange({ ...value, start: newValue });
-      } else {
-        if (newValue > value.start) onChange({ ...value, end: newValue });
-      }
-    }
-  };
-
-  const handleMouseDown = (
-    e: React.MouseEvent | React.TouchEvent,
-    handle: "start" | "end",
+  const getSlotIndexFromEvent = (
+    e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent,
   ) => {
-    e.preventDefault();
-    setIsDragging(handle);
+    if (!sliderRef.current) return 0;
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const rect = sliderRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const slotWidth = rect.width / 48; // 48 slots for 15-min intervals
+    let index = Math.floor(x / slotWidth);
+    return Math.max(0, Math.min(47, index)); // Clamp between 0 and 47
   };
 
-  const handleMouseMove = useCallback(
+  const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    const newSlots = new Set<number>();
+    const index = getSlotIndexFromEvent(e);
+    setDragStartSlot(index);
+    newSlots.add(index);
+    onChange(newSlots);
+  };
+
+  const duringDrag = useCallback(
     (e: MouseEvent | TouchEvent) => {
-      if (isDragging) {
-        if (!sliderRef.current) return;
-        const rect = sliderRef.current.getBoundingClientRect();
-        const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-        const x = clientX - rect.left;
-        let percentage = (x / rect.width) * 100;
-        percentage = Math.max(0, Math.min(100, percentage));
+      if (!isDragging) return;
 
-        const newStep = Math.round((percentage / 100) * totalSteps);
-        const newValue = newStep + 8 * 4;
+      const currentIndex = getSlotIndexFromEvent(e);
+      const newSlots = new Set<number>();
 
-        if (isDragging === "start") {
-          if (newValue < value.end) onChange({ ...value, start: newValue });
-        } else if (isDragging === "end") {
-          if (newValue > value.start) onChange({ ...value, end: newValue });
+      if (activeHandle) {
+        // Adjusting an existing selection
+        const slots = [...selectedSlots].sort((a, b) => a - b);
+        let minSlot = slots[0];
+        let maxSlot = slots[slots.length - 1];
+
+        if (activeHandle === "start") {
+          minSlot = Math.min(currentIndex, maxSlot);
+        } else {
+          // 'end'
+          maxSlot = Math.max(currentIndex, minSlot);
+        }
+
+        for (let i = minSlot; i <= maxSlot; i++) {
+          newSlots.add(i);
+        }
+      } else {
+        // Creating a new selection
+        const start = Math.min(dragStartSlot, currentIndex);
+        const end = Math.max(dragStartSlot, currentIndex);
+        for (let i = start; i <= end; i++) {
+          newSlots.add(i);
         }
       }
+
+      onChange(newSlots);
     },
-    [isDragging, value, onChange, totalSteps],
+    [isDragging, activeHandle, selectedSlots, dragStartSlot, onChange],
   );
 
-  const handleMouseUp = useCallback(() => {
+  const endDrag = useCallback(() => {
     setIsDragging(false);
+    setActiveHandle(null);
   }, []);
 
   useEffect(() => {
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    document.addEventListener("touchmove", handleMouseMove);
-    document.addEventListener("touchend", handleMouseUp);
+    if (isDragging) {
+      document.addEventListener("mousemove", duringDrag);
+      document.addEventListener("mouseup", endDrag);
+      document.addEventListener("touchmove", duringDrag, { passive: false });
+      document.addEventListener("touchend", endDrag);
+    }
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("touchmove", handleMouseMove);
-      document.removeEventListener("touchend", handleMouseUp);
+      document.removeEventListener("mousemove", duringDrag);
+      document.removeEventListener("mouseup", endDrag);
+      document.removeEventListener("touchmove", duringDrag);
+      document.removeEventListener("touchend", endDrag);
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, [isDragging, duringDrag, endDrag]);
 
-  const formatTime = (val: number) => {
-    const hour = Math.floor(val / 4);
-    const min = (val % 4) * 15;
-    return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+  const handleStartHandle = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setActiveHandle("start");
+    setIsDragging(true);
   };
 
-  const startPercentage = valueToPercentage(value.start);
-  const endPercentage = valueToPercentage(value.end);
+  const handleEndHandle = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setActiveHandle("end");
+    setIsDragging(true);
+  };
+
+  const slotIndexToTime = (slotIndex: number) => {
+    const totalMinutes = slotIndex * 15;
+    const hours = 8 + Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+
+  const minSlot = selectedSlots.size > 0 ? Math.min(...selectedSlots) : -1;
+  const maxSlot = selectedSlots.size > 0 ? Math.max(...selectedSlots) : -1;
 
   return (
     <div className="bg-[var(--bg-tertiary)] p-2 rounded-lg">
       <div className="flex justify-between text-center text-xs text-[var(--text-secondary)] mb-1 px-1">
-        {[...Array(13)].map((_, i) => (
-          <span key={i}>{8 + i}時</span>
-        ))}
+        <span>8時</span>
+        <span>9時</span>
+        <span>10時</span>
+        <span>11時</span>
+        <span>12時</span>
+        <span>13時</span>
+        <span>14時</span>
+        <span>15時</span>
+        <span>16時</span>
+        <span>17時</span>
+        <span>18時</span>
+        <span>19時</span>
+        <span>20時</span>
       </div>
-      <div
-        ref={sliderRef}
-        onClick={handleInteraction}
-        className="relative w-full h-10 bg-[var(--bg-primary)] rounded-md flex items-center border border-[var(--border-color)] cursor-pointer select-none"
-      >
+      <div className="relative">
         <div
-          className="absolute h-full bg-[var(--accent-color)] bg-opacity-30 border-x-2 border-[var(--accent-color)]"
-          style={{
-            left: `${startPercentage}%`,
-            right: `${100 - endPercentage}%`,
-          }}
+          ref={sliderRef}
+          className="w-full h-10 bg-[var(--bg-primary)] rounded-md flex border border-[var(--border-color)] cursor-pointer select-none"
+          onMouseDown={startDrag}
+          onTouchStart={startDrag}
         >
-          <div
-            onMouseDown={(e) => handleMouseDown(e, "start")}
-            onTouchStart={(e) => handleMouseDown(e, "start")}
-            className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-6 rounded-full bg-[var(--accent-color)] cursor-pointer"
-          ></div>
-          <div
-            onMouseDown={(e) => handleMouseDown(e, "end")}
-            onTouchStart={(e) => handleMouseDown(e, "end")}
-            className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-6 rounded-full bg-[var(--accent-color)] cursor-pointer"
-          ></div>
+          {[...Array(48)].map((_, i) => (
+            <div
+              key={i}
+              className={`time-slot flex-1 transition-colors ${selectedSlots.has(i) ? "selected" : ""}`}
+              style={{
+                borderRight:
+                  i < 47 ? "1px solid var(--time-slot-border)" : "none",
+                backgroundColor: selectedSlots.has(i)
+                  ? "var(--time-slot-selected-bg)"
+                  : "transparent",
+              }}
+            />
+          ))}
         </div>
+
+        {/* Start Handle */}
+        {minSlot >= 0 && (
+          <div
+            className="absolute bg-[var(--accent-color)] border-2 border-[var(--bg-primary)] rounded cursor-ew-resize z-10"
+            style={{
+              position: "absolute",
+              top: "-2px",
+              bottom: "-2px",
+              width: "10px",
+              left: `${(minSlot / 48) * 100}%`,
+            }}
+            onMouseDown={handleStartHandle}
+            onTouchStart={handleStartHandle}
+          />
+        )}
+
+        {/* End Handle */}
+        {maxSlot >= 0 && (
+          <div
+            className="absolute bg-[var(--accent-color)] border-2 border-[var(--bg-primary)] rounded cursor-ew-resize z-10"
+            style={{
+              position: "absolute",
+              top: "-2px",
+              bottom: "-2px",
+              width: "10px",
+              left: `${((maxSlot + 1) / 48) * 100}%`,
+              transform: "translateX(-100%)",
+            }}
+            onMouseDown={handleEndHandle}
+            onTouchStart={handleEndHandle}
+          />
+        )}
       </div>
-      <div className="text-center text-sm font-semibold text-[var(--text-primary)] mt-2">
-        {formatTime(value.start)} - {formatTime(value.end)}
-      </div>
+
+      {/* Time Display Container */}
+      {selectedSlots.size > 0 && (
+        <div className="relative h-4 mt-1 text-xs text-[var(--text-secondary)]">
+          <span
+            className="absolute"
+            style={{ left: `${(minSlot / 48) * 100}%` }}
+          >
+            {slotIndexToTime(minSlot)}
+          </span>
+          <span
+            className="absolute"
+            style={{
+              left: `${((maxSlot + 1) / 48) * 100}%`,
+              transform: "translateX(-100%)",
+            }}
+          >
+            {slotIndexToTime(maxSlot + 1)}
+          </span>
+        </div>
+      )}
     </div>
   );
 };
@@ -160,7 +236,9 @@ export default function Home() {
     new Set(["all"]),
   );
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [timeRange, setTimeRange] = useState({ start: 8 * 4, end: 21 * 4 }); // 8:00 - 21:00
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<Set<number>>(
+    new Set(),
+  );
   const [searchResults, setSearchResults] = useState<Classroom[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -170,6 +248,7 @@ export default function Home() {
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [classroomSearch, setClassroomSearch] = useState("");
+  const [universitySearch, setUniversitySearch] = useState("");
   const [toast, setToast] = useState({
     show: false,
     message: "",
@@ -246,24 +325,32 @@ export default function Home() {
             selectedBuildings.has(c.building),
         )
       : [];
+  const filteredUniversities = mockUniversities.filter((uni) =>
+    uni.name.toLowerCase().includes(universitySearch.toLowerCase()),
+  );
   const filteredClassrooms = classrooms.filter((c) =>
     c.name.includes(classroomSearch),
   );
 
   // Handlers
   const handleSearch = () => {
-    if (!selectedUniversity || !selectedDay) {
-      showToast("大学または曜日を選択してください", true);
+    if (!selectedDay || selectedTimeSlots.size === 0) {
+      showToast("曜日と時間を選択してください", true);
       return;
     }
+    if (!selectedUniversity) {
+      showToast("大学を選択してください", true);
+      return;
+    }
+
+    // Each slot is 0.25 hours (15 mins)
+    const searchStartTime = 8 + Math.min(...selectedTimeSlots) * 0.25;
+    const searchEndTime = 8 + (Math.max(...selectedTimeSlots) + 1) * 0.25;
 
     const timeToMinutes = (timeStr: string) => {
       const [h, m] = timeStr.split(":").map(Number);
       return h * 60 + m;
     };
-
-    const startMinutes = timeRange.start * 15;
-    const endMinutes = timeRange.end * 15;
 
     const results = mockClassrooms.filter((room) => {
       // University and Building check
@@ -277,10 +364,12 @@ export default function Home() {
         if (slot.day !== selectedDay) return false;
         const slotStartMinutes = timeToMinutes(slot.start);
         const slotEndMinutes = timeToMinutes(slot.end);
-        // Check for any overlap
-        return (
-          Math.max(startMinutes, slotStartMinutes) <
-          Math.min(endMinutes, slotEndMinutes)
+        const searchStartMinutes = searchStartTime * 60;
+        const searchEndMinutes = searchEndTime * 60;
+
+        return !(
+          slotEndMinutes <= searchStartMinutes ||
+          slotStartMinutes >= searchEndMinutes
         );
       });
 
@@ -368,10 +457,17 @@ export default function Home() {
     );
   };
 
+  const handleDaySelect = (day: number) => {
+    setSelectedDay(day);
+    // Clear time selection when day changes
+    setSelectedTimeSlots(new Set());
+  };
+
   const handleUniversitySelect = (university: University) => {
     setSelectedUniversity(university);
     setSelectedBuildings(new Set(["all"]));
     setIsUniversityModalOpen(false);
+    setUniversitySearch("");
   };
 
   const handleBuildingChange = (building: string) => {
@@ -476,8 +572,8 @@ export default function Home() {
                 {["月", "火", "水", "木", "金", "土"].map((day, index) => (
                   <button
                     key={day}
-                    onClick={() => setSelectedDay(index + 1)}
-                    className={`day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors ${selectedDay === index + 1 ? "bg-[var(--accent-color)] text-[var(--accent-text)]" : ""}`}
+                    onClick={() => handleDaySelect(index + 1)}
+                    className={`day-btn border border-[var(--border-color)] py-2 rounded-md text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors ${selectedDay === index + 1 ? "active" : ""}`}
                   >
                     {day}
                   </button>
@@ -489,7 +585,10 @@ export default function Home() {
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                 時間 (15分単位)
               </label>
-              <TimeSlider value={timeRange} onChange={setTimeRange} />
+              <TimeSlider
+                selectedSlots={selectedTimeSlots}
+                onChange={setSelectedTimeSlots}
+              />
             </div>
 
             <button
@@ -586,33 +685,43 @@ export default function Home() {
         {/* 既存の大学モーダルもModalでラップ */}
         <Modal
           isOpen={isUniversityModalOpen}
-          onClose={() => setIsUniversityModalOpen(false)}
+          onClose={() => {
+            setIsUniversityModalOpen(false);
+            setUniversitySearch("");
+          }}
         >
           <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[var(--text-primary)]">
-              大学を選択
-            </h2>
+            <h3 className="text-lg font-bold">大学一覧</h3>
             <button
-              onClick={() => setIsUniversityModalOpen(false)}
-              className="text-2xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              onClick={() => {
+                setIsUniversityModalOpen(false);
+                setUniversitySearch("");
+              }}
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl"
             >
-              <i className="fas fa-times"></i>
+              &times;
             </button>
           </header>
-          <div className="p-4 overflow-y-auto">
-            <ul className="space-y-2">
-              {mockUniversities.map((uni) => (
+          <div className="p-4 flex-grow overflow-y-auto">
+            <input
+              type="text"
+              value={universitySearch}
+              onChange={(e) => setUniversitySearch(e.target.value)}
+              placeholder="大学名で検索..."
+              className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
+            />
+            <ul className="space-y-1">
+              {filteredUniversities.map((uni) => (
                 <li key={uni.name}>
                   <button
                     onClick={() => handleUniversitySelect(uni)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                    className={`w-full text-left p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${
+                      selectedUniversity?.name === uni.name
+                        ? "selected font-bold text-[var(--text-primary)]"
+                        : "text-[var(--text-secondary)]"
+                    }`}
                   >
-                    <span className="font-semibold text-[var(--text-primary)]">
-                      {uni.name}
-                    </span>
-                    <p className="text-sm text-[var(--text-secondary)]">
-                      {uni.lat}, {uni.lon}
-                    </p>
+                    {uni.name}
                   </button>
                 </li>
               ))}
