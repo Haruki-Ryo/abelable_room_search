@@ -22,7 +22,7 @@
             --accent-text: #ffffff;
             --header-bg: #292524;
             --header-text: #fffffc;
-
+            
             /* Light Mode Specific Colors */
             --tag-active-bg: #292524;
             --tag-active-text: #fffffc;
@@ -65,7 +65,7 @@
             background-color: var(--bg-secondary);
             color: var(--text-primary);
         }
-
+        
         /* Component Styles using variables */
         .day-btn.active, .building-tag.active {
             background-color: var(--tag-active-bg);
@@ -87,7 +87,7 @@
             color: var(--attribute-tag-text);
             border: 1px solid var(--attribute-tag-border);
         }
-
+        
         /* Toast Notification */
         #toast-notification {
             transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
@@ -106,13 +106,13 @@
             -ms-overflow-style: none;  /* IE and Edge */
             scrollbar-width: none;  /* Firefox */
         }
-
+        
         /* Button Active State for Touch Feedback */
         #location-btn:active, #search-btn:active {
             transform: scale(0.98);
             opacity: 0.9;
         }
-
+        
         #location-btn.location-active {
             background-color: var(--bg-primary);
             color: var(--accent-color);
@@ -124,7 +124,7 @@
              color: var(--accent-color);
              border: 1px solid var(--accent-color);
         }
-
+        
         /* Style for end time display to align its right edge */
         #end-time-display {
             transform: translateX(-100%);
@@ -139,7 +139,7 @@
             cursor: grabbing;
             cursor: -webkit-grabbing;
         }
-
+        
         /* Time Handle Styles */
         .time-handle {
             position: absolute;
@@ -183,7 +183,7 @@
             <div id="search-page">
                 <section id="search-criteria" class="bg-[var(--bg-primary)] p-4 rounded-lg shadow-sm mb-6">
                     <h2 class="text-lg font-semibold mb-4 flex items-center text-[var(--text-primary)]"><i class="fas fa-search mr-2"></i>検索項目</h2>
-
+                    
                     <button id="location-btn" class="w-full bg-[var(--accent-color)] text-[var(--accent-text)] font-bold py-2.5 px-4 rounded-lg hover:opacity-90 transition-all shadow-md flex items-center justify-center text-base mb-4">
                         <i class="fas fa-map-marker-alt mr-2"></i>現在地から大学・建物を設定
                     </button>
@@ -369,7 +369,7 @@
             </div>
         </div>
     </div>
-
+    
     <!-- 建物選択モーダル (レビュー用) -->
     <div id="review-building-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
         <div class="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
@@ -383,7 +383,7 @@
             </div>
         </div>
     </div>
-
+    
     <!-- 教室選択モーダル (レビュー用) -->
     <div id="review-classroom-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-20">
         <div class="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
@@ -472,7 +472,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- サンプルデータ ---
-            const mockUniversities = [
+            const mockUniversities = [ 
                 { name: "東京大学", lat: 35.7128, lon: 139.7624 },
                 { name: "京都大学", lat: 35.0262, lon: 135.7808 },
                 { name: "大阪大学", lat: 34.8213, lon: 135.5220 },
@@ -481,12 +481,12 @@
             ];
             const mockClassrooms = [
                 // 全学共通A棟
-                { id: 1, name: '301号室', building: '全学共通A棟', lat: 34.823, lon: 135.523, attributes: ['会話OK', 'コンセント有'], schedule: {
+                { id: 1, name: '301号室', building: '全学共通A棟', lat: 34.823, lon: 135.523, attributes: ['会話OK', 'コンセント有'], schedule: { 
                     '1': [{ start: '10:40', end: '12:10' }, { start: '13:00', end: '14:30' }], // 月
                     '3': [{ start: '09:00', end: '10:30' }, { start: '14:45', end: '16:15' }], // 水
                     '5': [{ start: '16:30', end: '18:00' }]  // 金
                 } },
-                { id: 2, name: '102号室', building: '全学共通A棟', lat: 34.823, lon: 135.523, attributes: ['コンセント有'], schedule: {
+                { id: 2, name: '102号室', building: '全学共通A棟', lat: 34.823, lon: 135.523, attributes: ['コンセント有'], schedule: { 
                     '2': [{ start: '09:00', end: '12:10' }], // 火
                     '4': [{ start: '13:00', end: '17:30' }]  // 木
                 } },
@@ -497,7 +497,7 @@
                 } },
 
                 // 全学共通B棟
-                { id: 3, name: '205号室', building: '全学共通B棟', lat: 34.822, lon: 135.524, attributes: [], schedule: {
+                { id: 3, name: '205号室', building: '全学共通B棟', lat: 34.822, lon: 135.524, attributes: [], schedule: { 
                     '1': [{ start: '14:45', end: '16:15' }], // 月
                     '2': [{ start: '10:40', end: '12:10' }], // 火
                     '5': [{ start: '09:00', end: '12:10' }, { start: '13:00', end: '14:30' }] // 金
@@ -509,7 +509,7 @@
                 } },
 
                 // 全学共通C棟
-                { id: 4, name: '401号室', building: '全学共通C棟', lat: 34.821, lon: 135.525, attributes: ['会話OK'], schedule: {
+                { id: 4, name: '401号室', building: '全学共通C棟', lat: 34.821, lon: 135.525, attributes: ['会話OK'], schedule: { 
                     '1': [], // 月曜は終日空き
                     '3': [{ start: '09:00', end: '12:10' }, { start: '16:30', end: '18:00' }], // 水
                     '5': [{ start: '09:00', end: '17:00' }] // 金
@@ -519,22 +519,22 @@
                     '4': [{ start: '14:45', end: '16:15' }], // 木
                     '5': [{ start: '09:00', end: '10:30' }] // 金
                 } },
-
+                
                 // その他
-                { id: 5, name: '101演習室', building: '情報学部棟', lat: 34.820, lon: 135.526, attributes: ['コンセント有'], schedule: {
+                { id: 5, name: '101演習室', building: '情報学部棟', lat: 34.820, lon: 135.526, attributes: ['コンセント有'], schedule: { 
                     '1': [{ start: '09:00', end: '17:30' }], // 月
                     '2': [], // 火曜は終日空き
                     '3': [{ start: '13:00', end: '15:00' }], // 水
                     '4': [{ start: '09:00', end: '12:10' }]  // 木
                 } },
-                { id: 6, name: '大会議室', building: '本部棟', lat: 34.819, lon: 135.527, attributes: ['会話OK', 'コンセント有'], schedule: {
+                { id: 6, name: '大会議室', building: '本部棟', lat: 34.819, lon: 135.527, attributes: ['会話OK', 'コンセント有'], schedule: { 
                     '1': [{ start: '10:00', end: '11:00' }], // 月
                     '2': [{ start: '14:00', end: '17:00' }], // 火
                     '3': [{ start: '08:00', end: '22:00' }], // 水 (終日利用不可)
                     '4': [{ start: '10:00', end: '12:00' }], // 木
                     '5': [{ start: '13:00', end: '18:00' }]  // 金
                 } },
-                { id: 10, name: 'LL教室', building: '語学センター', lat: 34.818, lon: 135.528, attributes: ['コンセント有'], schedule: {
+                { id: 10, name: 'LL教室', building: '語学センター', lat: 34.818, lon: 135.528, attributes: ['コンセント有'], schedule: { 
                     '1': [{ start: '13:00', end: '14:30' }], // 月
                     '2': [{ start: '10:40', end: '12:10' }], // 火
                     '3': [{ start: '14:45', end: '16:15' }], // 水
@@ -590,7 +590,7 @@
             const timeDisplayContainer = document.getElementById('time-display-container');
             const startTimeDisplay = document.getElementById('start-time-display');
             const endTimeDisplay = document.getElementById('end-time-display');
-
+            
             // Review Page Elements
             const reviewUniversitySelectBtn = document.getElementById('review-university-select-btn');
             const reviewSelectedUniversityName = document.getElementById('review-selected-university-name');
@@ -600,7 +600,7 @@
             const reviewLocationBuildingBtn = document.getElementById('review-location-building-btn');
             const reviewClassroomSelectBtn = document.getElementById('review-classroom-select-btn');
             const reviewSelectedClassroomName = document.getElementById('review-selected-classroom-name');
-
+            
             // Review Modals
             const reviewUniversityModal = document.getElementById('review-university-modal');
             const closeReviewUniversityModalBtn = document.getElementById('close-review-university-modal-btn');
@@ -628,7 +628,7 @@
             let selectedBuildings = new Set(['all']);
             let toastTimeout;
             let isUsingLocation = false;
-
+            
             // Review Page State
             let reviewState = {
                 university: null,
@@ -667,19 +667,19 @@
                 locationBtn.addEventListener('click', handleLocationSelect);
 
                 daySelector.addEventListener('click', handleDaySelect);
-
+                
                 // Time slider and handle drag events
                 timeSlider.addEventListener('mousedown', (e) => startDrag(e));
                 startHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); activeHandle = 'start'; isDragging = true; });
                 endHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); activeHandle = 'end'; isDragging = true; });
-
+                
                 document.addEventListener('mousemove', (e) => duringDrag(e));
                 document.addEventListener('mouseup', endDrag);
-
+                
                 timeSlider.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e.touches[0]); }, { passive: false });
                 startHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); activeHandle = 'start'; isDragging = true; }, { passive: false });
                 endHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); activeHandle = 'end'; isDragging = true; }, { passive: false });
-
+                
                 document.addEventListener('touchmove', (e) => { if (isDragging) { e.preventDefault(); duringDrag(e.touches[0]); } }, { passive: false });
                 document.addEventListener('touchend', endDrag);
 
@@ -705,13 +705,13 @@
                 document.querySelectorAll('.back-to-search-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => { e.preventDefault(); showPage('search-page'); });
                 });
-
+                
                 document.querySelectorAll('.theme-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         themeManager.setTheme(btn.dataset.theme);
                     });
                 });
-
+                
                 // Review Page Listeners
                 reviewUniversitySelectBtn.addEventListener('click', openReviewUniversityModal);
                 closeReviewUniversityModalBtn.addEventListener('click', () => reviewUniversityModal.classList.add('hidden'));
@@ -735,7 +735,7 @@
                     showToast('レビューを投稿しました！');
                     showPage('search-page');
                 });
-
+                
                 scrollableTagsContainer.addEventListener('scroll', updateScrollbar);
                 window.addEventListener('resize', updateScrollbar);
 
@@ -770,7 +770,7 @@
                     buildingScroller.scrollLeft = scrollLeftStart - walk;
                 });
             };
-
+            
             // --- テーマ管理 ---
             const themeManager = {
                 init() {
@@ -808,7 +808,7 @@
             function showToast(message, isError = false) {
                 clearTimeout(toastTimeout);
                 toastMessage.textContent = message;
-
+                
                 toastNotification.classList.remove('bg-stone-800', 'bg-red-500', 'bg-orange-500');
                 toastIcon.classList.remove('fa-check-circle', 'fa-exclamation-triangle');
 
@@ -823,7 +823,7 @@
                     toastNotification.classList.remove('show');
                 }, 2500);
             }
-
+            
             function closeMenu() {
                 sideMenu.classList.add('translate-x-full');
                 sideMenuOverlay.classList.add('hidden');
@@ -840,7 +840,7 @@
             // --- UIイベントハンドラ ---
             function handleDaySelect(e) {
                 if (!e.target.classList.contains('day-btn')) return;
-
+                
                 daySelector.querySelectorAll('.day-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
@@ -848,7 +848,7 @@
                 const btn = e.target;
                 btn.classList.add('active');
                 selectedDay = btn.dataset.day;
-
+                
                 // Clear time selection when day changes
                 selectedTimeSlots.clear();
                 updateSliderUI();
@@ -879,7 +879,7 @@
 
             function duringDrag(e) {
                 if (!isDragging) return;
-
+                
                 const currentIndex = getSlotIndexFromEvent(e);
 
                 if (activeHandle) { // Adjusting an existing selection
@@ -892,7 +892,7 @@
                     } else { // 'end'
                         maxSlot = Math.max(currentIndex, minSlot);
                     }
-
+                    
                     selectedTimeSlots.clear();
                     for (let i = minSlot; i <= maxSlot; i++) {
                         selectedTimeSlots.add(i);
@@ -912,6 +912,7 @@
             }
 
             function endDrag() {
+                if (!isDragging && !activeHandle) return;
                 isDragging = false;
                 activeHandle = null;
                 dragStartSlot = -1;
@@ -924,7 +925,7 @@
                     slot.classList.toggle('selected', selectedTimeSlots.has(i));
                 });
             }
-
+            
             function slotIndexToTime(index) {
                 const totalMinutes = index * 15;
                 const hours = 8 + Math.floor(totalMinutes / 60);
@@ -979,7 +980,7 @@
                 updateLocationButtonUI();
                 const clickedTag = e.target;
                 const buildingName = clickedTag.dataset.building;
-
+                
                 if (buildingName === 'all') {
                     selectedBuildings.clear();
                     selectedBuildings.add('all');
@@ -1016,12 +1017,12 @@
                 // Each slot is 0.25 hours (15 mins)
                 const searchStartTime = 8 + (Math.min(...selectedTimeSlots) * 0.25);
                 const searchEndTime = 8 + ((Math.max(...selectedTimeSlots) + 1) * 0.25);
-
+                
                 const availableRooms = mockClassrooms.filter(room => {
                     if (!selectedBuildings.has('all') && !selectedBuildings.has(room.building)) {
                         return false;
                     }
-
+                    
                     const scheduleForDay = room.schedule[selectedDay] || [];
                     const isBusy = scheduleForDay.some(slot => {
                         const slotStart = timeToHours(slot.start);
@@ -1068,7 +1069,7 @@
 
             function renderResults(rooms) {
                 resultsHeaderTitle.classList.remove('hidden');
-
+                
                 resultsContainer.innerHTML = '';
                 if (rooms.length === 0) {
                     resultsContainer.innerHTML = `<div class="text-center text-stone-500 py-8"><i class="fas fa-ghost text-4xl mb-3"></i><p>条件に合う空き教室はありませんでした。</p></div>`;
@@ -1088,7 +1089,7 @@
                     const icon = attr === '会話OK' ? 'fa-comments' : 'fa-plug';
                     return `<span class="attribute-tag text-xs font-medium px-2.5 py-0.5 rounded-full"><i class="fas ${icon} mr-1"></i>${attr}</span>`;
                 }).join(' ');
-
+                
                 const daySchedule = room.schedule[selectedDay] || [];
                 const freeSlotsHTML = generateFreeSlotsTimeline(daySchedule);
 
@@ -1144,12 +1145,12 @@
                 const [h, m] = timeStr.split(':').map(Number);
                 return h + m / 60;
             }
-
+            
             function timeToMinutes(timeStr) {
                 const [h, m] = timeStr.split(':').map(Number);
                 return h * 60 + m;
             }
-
+            
             // --- 位置情報関連 ---
             const currentUserPosition = { lat: 34.823, lon: 135.523 }; // 大阪大学 吹田キャンパス付近
 
@@ -1169,7 +1170,7 @@
                 });
                 return nearestItem;
             }
-
+            
             function findNearestBuilding() {
                 const buildingsWithCoords = {};
                 mockClassrooms.forEach(room => {
@@ -1218,7 +1219,7 @@
                 updateBuildingFilterState();
                 resetSearchResults();
             }
-
+            
             function handleLocationSelect() {
                 const nearestUniversity = findNearest(mockUniversities);
                 if (nearestUniversity) {
@@ -1279,7 +1280,7 @@
                 const newSelections = new Set();
                 const checkboxes = fullBuildingList.querySelectorAll('input[type="checkbox"]:checked');
                 checkboxes.forEach(cb => newSelections.add(cb.dataset.building));
-
+                
                 selectedBuildings = newSelections;
                 if (selectedBuildings.size === 0) {
                     selectedBuildings.add('all');
@@ -1292,12 +1293,12 @@
 
             function populateScrollableBuildingTags() {
                 scrollableTags.innerHTML = '';
-
+                
                 const allBtn = document.createElement('button');
                 allBtn.className = 'building-tag flex-shrink-0 border border-[var(--border-color)] bg-[var(--bg-primary)] px-4 py-1.5 rounded-full text-sm font-medium text-[var(--text-secondary)]';
                 allBtn.dataset.building = 'all';
                 allBtn.textContent = 'すべて';
-
+                
                 const sortedBuildings = [...allBuildings].sort((a, b) => {
                     const aSelected = selectedBuildings.has(a);
                     const bSelected = selectedBuildings.has(b);
@@ -1321,15 +1322,15 @@
                     }
                     scrollableTags.appendChild(btn);
                 });
-
+                
                 scrollableTagsContainer.scrollLeft = 0;
                 setTimeout(updateScrollbar, 50);
             }
-
+            
             function updateScrollbar() {
                 const scrollWidth = scrollableTags.scrollWidth;
                 const clientWidth = scrollableTagsContainer.clientWidth;
-
+                
                 if(buildingFilterContainer.classList.contains('hidden')) {
                     scrollbarTrack.classList.add('hidden');
                     return;
@@ -1340,11 +1341,11 @@
                 if (scrollWidth > clientWidth) {
                     const thumbWidthPercentage = (clientWidth / scrollWidth) * 100;
                     scrollbarThumb.style.width = `${thumbWidthPercentage}%`;
-
+                    
                     const scrollLeft = scrollableTagsContainer.scrollLeft;
                     const maxScrollLeft = scrollWidth - clientWidth;
                     const scrollPercentage = scrollLeft / maxScrollLeft;
-
+                    
                     const maxThumbLeft = 100 - thumbWidthPercentage;
                     scrollbarThumb.style.left = `${scrollPercentage * maxThumbLeft}%`;
                 } else {
@@ -1352,7 +1353,7 @@
                     scrollbarThumb.style.left = `0%`;
                 }
             }
-
+            
             function updateBuildingFilterState() {
                 if (selectedUniversity) {
                     buildingFilterWrapper.classList.remove('hidden');
@@ -1366,7 +1367,7 @@
                     scrollbarTrack.classList.add('hidden');
                 }
             }
-
+            
             // --- レビューページ関連 ---
             function openReviewUniversityModal() {
                 populateReviewUniversityList();
@@ -1485,7 +1486,7 @@
                 reviewSelectedClassroomName.textContent = reviewState.classroom;
                 reviewClassroomModal.classList.add('hidden');
             }
-
+            
             function resetSearchResults() {
                 resultsSection.classList.add('hidden');
                 initialMessage.classList.remove('hidden');
