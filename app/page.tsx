@@ -35,7 +35,7 @@ const TimeSlider: React.FC<TimeSliderProps> = ({ selectedSlots, onChange }) => {
     const rect = sliderRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const slotWidth = rect.width / 48; // 48 slots for 15-min intervals
-    let index = Math.floor(x / slotWidth);
+    const index = Math.floor(x / slotWidth);
     return Math.max(0, Math.min(47, index)); // Clamp between 0 and 47
   };
 
