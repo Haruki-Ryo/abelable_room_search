@@ -29,11 +29,15 @@ const BuildingTags: React.FC<BuildingTagsProps> = ({ buildings, selected, onChan
       const maxThumbLeft = 100 - thumbWidth;
       thumbRef.current.style.left = `${scrollPercent * maxThumbLeft}%`;
     };
+
+    // Snapshot the current element to avoid stale ref in cleanup
+    const container = scrollRef.current;
+
     updateScrollbar();
-    scrollRef.current?.addEventListener('scroll', updateScrollbar);
+    container?.addEventListener('scroll', updateScrollbar);
     window.addEventListener('resize', updateScrollbar);
     return () => {
-      scrollRef.current?.removeEventListener('scroll', updateScrollbar);
+      container?.removeEventListener('scroll', updateScrollbar);
       window.removeEventListener('resize', updateScrollbar);
     };
   }, []);
@@ -58,4 +62,4 @@ const BuildingTags: React.FC<BuildingTagsProps> = ({ buildings, selected, onChan
   );
 };
 
-export default BuildingTags; 
+export default BuildingTags;

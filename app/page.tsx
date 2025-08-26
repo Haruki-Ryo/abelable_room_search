@@ -7,16 +7,15 @@ import Modal from "./components/Modal";
 import Toast from "./components/Toast";
 import ThemeMenu from "./components/ThemeMenu";
 import BuildingTags from "./components/BuildingTags";
-import TimelineBar from "./components/TimelineBar";
 
 // Type definitions
-type University = (typeof mockUniversities)[0];
-type Classroom = (typeof mockClassrooms)[0];
 
 interface TimeSliderProps {
   selectedSlots: Set<number>;
   onChange: (slots: Set<number>) => void;
 }
+
+type University = (typeof mockUniversities)[0];
 
 // Time Slider Component (HTMLファイル完全再現版)
 const TimeSlider: React.FC<TimeSliderProps> = ({ selectedSlots, onChange }) => {
@@ -231,7 +230,7 @@ export default function Home() {
   // State management
   const [isUniversityModalOpen, setIsUniversityModalOpen] = useState(false);
   const [selectedUniversity, setSelectedUniversity] =
-    useState<University | null>(null);
+    useState<(typeof mockUniversities)[0] | null>(null);
   const [selectedBuildings, setSelectedBuildings] = useState<Set<string>>(
     new Set(["all"]),
   );
@@ -239,11 +238,11 @@ export default function Home() {
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<Set<number>>(
     new Set(),
   );
-  const [searchResults, setSearchResults] = useState<Classroom[]>([]);
+  const [searchResults, setSearchResults] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  // 1. State追加
+  // 1. State追加（UI維持のため）
   const [isBuildingModalOpen, setIsBuildingModalOpen] = useState(false);
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
@@ -298,20 +297,16 @@ export default function Home() {
         .removeEventListener("change", listener);
   }, [theme]);
 
+  // 大学に紐づく建物一覧（UI用）。検索自体はAPI使用
   const buildings = selectedUniversity
     ? [
         "all",
-        ...Array.from(
-          new Set(
-            mockClassrooms
-              .filter((c) => c.university === selectedUniversity.name)
-              .map((c) => c.building),
-          ),
-        ),
+        "全学共通棟",
+        "基礎工学棟",
       ]
     : [];
 
-  // 2. 建物・教室リスト取得
+  // 2. 建物・教室リスト取得（UI用）
   const filteredBuildings = buildings.filter(
     (b) => b === "all" || b.includes(buildingSearch),
   );
@@ -325,61 +320,66 @@ export default function Home() {
             selectedBuildings.has(c.building),
         )
       : [];
-  const filteredUniversities = mockUniversities.filter((uni) =>
-    uni.name.toLowerCase().includes(universitySearch.toLowerCase()),
+  // 大学は大阪大学のみ表示
+  const filteredUniversities = mockUniversities.filter(
+    (uni) =>
+      uni.name === "大阪大学" &&
+      uni.name.toLowerCase().includes(universitySearch.toLowerCase()),
   );
   const filteredClassrooms = classrooms.filter((c) =>
     c.name.includes(classroomSearch),
   );
 
   // Handlers
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!selectedDay || selectedTimeSlots.size === 0) {
       showToast("曜日と時間を選択してください", true);
       return;
     }
-    if (!selectedUniversity) {
-      showToast("大学を選択してください", true);
-      return;
-    }
+    // Compute HH:MM from selected slots (8:00 base, 15-min increments)
+    const minSlot = Math.min(...selectedTimeSlots);
+    const maxSlot = Math.max(...selectedTimeSlots) + 1; // end is exclusive
+    const toHHMM = (mins: number) =>
+      `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    const start = toHHMM(480 + 15 * minSlot);
+    const end = toHHMM(480 + 15 * maxSlot);
 
-    // Each slot is 0.25 hours (15 mins)
-    const searchStartTime = 8 + Math.min(...selectedTimeSlots) * 0.25;
-    const searchEndTime = 8 + (Math.max(...selectedTimeSlots) + 1) * 0.25;
+    try {
+      const p = new URLSearchParams({ day: String(selectedDay), start, end });
 
-    const timeToMinutes = (timeStr: string) => {
-      const [h, m] = timeStr.split(":").map(Number);
-      return h * 60 + m;
-    };
+      // room_regex: user input has precedence; otherwise map selected buildings to regex
+      const textFilter = classroomSearch.trim();
+      if (textFilter) {
+        p.append("room_regex", textFilter);
+      } else {
+        const selection = Array.from(selectedBuildings).filter((b) => b !== "all");
+        const map: Record<string, string> = { "全学共通棟": "共", "基礎工学棟": "基" };
+        const tokens = selection.map((b) => map[b]).filter(Boolean);
+        if (tokens.length > 0) {
+          p.append("room_regex", tokens.join("|"));
+        }
+      }
 
-    const results = mockClassrooms.filter((room) => {
-      // University and Building check
-      const universityMatch = room.university === selectedUniversity.name;
-      const buildingMatch =
-        selectedBuildings.has("all") || selectedBuildings.has(room.building);
-      if (!universityMatch || !buildingMatch) return false;
-
-      // Availability check
-      const isAvailable = !room.schedule.some((slot) => {
-        if (slot.day !== selectedDay) return false;
-        const slotStartMinutes = timeToMinutes(slot.start);
-        const slotEndMinutes = timeToMinutes(slot.end);
-        const searchStartMinutes = searchStartTime * 60;
-        const searchEndMinutes = searchEndTime * 60;
-
-        return !(
-          slotEndMinutes <= searchStartMinutes ||
-          slotStartMinutes >= searchEndMinutes
-        );
+      const res = await fetch(`/api/availability?${p.toString()}`, {
+        cache: "no-store",
       });
-
-      return isAvailable;
-    });
-
-    setSearchResults(results);
-    setHasSearched(true);
+      const json = (await res.json()) as { rooms: string[]; count: number; error?: string };
+      if (!res.ok) {
+        showToast(json.error || "検索に失敗しました", true);
+        setSearchResults([]);
+        setHasSearched(true);
+        return;
+      }
+      setSearchResults(json.rooms);
+      setHasSearched(true);
+    } catch {
+      showToast("検索時にエラーが発生しました", true);
+      setSearchResults([]);
+      setHasSearched(true);
+    }
   };
 
+  // 現在地から大阪大学＆最寄り建物（UI設定のみ）
   const handleLocationSearch = () => {
     setIsLocating(true);
     if (!navigator.geolocation) {
@@ -408,19 +408,12 @@ export default function Home() {
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           return R * c;
         };
-        let closestUniversity: University | null = null;
-        let minUniDist = Infinity;
-        mockUniversities.forEach((uni) => {
-          const dist = getDistance(latitude, longitude, uni.lat, uni.lon);
-          if (dist < minUniDist) {
-            minUniDist = dist;
-            closestUniversity = uni;
-          }
-        });
+        // 大学は大阪大学のみ対象
+        const ou = mockUniversities.find((u) => u.name === "大阪大学") || null;
+        let closestUniversity: University | null = ou;
         if (closestUniversity) {
           setSelectedUniversity(closestUniversity);
-          // 建物も最寄りを自動選択
-          const universityName = (closestUniversity as University).name;
+          const universityName = closestUniversity.name;
           const buildingsForUni = mockClassrooms.filter(
             (c) => c.university === universityName,
           );
@@ -435,9 +428,7 @@ export default function Home() {
           });
           if (closestBuilding) {
             setSelectedBuildings(new Set([closestBuilding]));
-            showToast(
-              `現在地から${universityName}、${closestBuilding}を適用しました`,
-            );
+            showToast(`現在地から${universityName}、${closestBuilding}を適用しました`);
           } else {
             setSelectedBuildings(new Set(["all"]));
             showToast(`現在地から${universityName}を適用しました`);
@@ -489,9 +480,12 @@ export default function Home() {
     setSelectedBuildings(newSelection);
   };
 
+  // On mount: set default day and fix university to Osaka University
   useEffect(() => {
     const today = new Date().getDay();
     setSelectedDay(today === 0 ? 1 : today);
+    const ou = mockUniversities.find((u) => u.name === "大阪大学") || null;
+    setSelectedUniversity(ou);
   }, []);
 
   return (
@@ -548,21 +542,39 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 建物選択UI部分を以下に置き換え */}
-            {selectedUniversity ? (
-              <BuildingTags
-                buildings={buildings}
-                selected={selectedBuildings}
-                onChange={handleBuildingChange}
+            {/* 建物選択UI */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                建物
+              </label>
+              {selectedUniversity ? (
+                <BuildingTags
+                  buildings={buildings}
+                  selected={selectedBuildings}
+                  onChange={handleBuildingChange}
+                />
+              ) : (
+                <div
+                  id="building-placeholder"
+                  className="text-center text-[var(--text-tertiary)] p-4 border border-dashed border-[var(--border-color)] rounded-md"
+                >
+                  大学を選択してください
+                </div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                教室名フィルタ（正規表現・任意）
+              </label>
+              <input
+                type="text"
+                value={classroomSearch}
+                onChange={(e) => setClassroomSearch(e.target.value)}
+                placeholder="例: ^共|人/"
+                className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--bg-primary)]"
               />
-            ) : (
-              <div
-                id="building-placeholder"
-                className="text-center text-[var(--text-tertiary)] p-4 border border-dashed border-[var(--border-color)] rounded-md"
-              >
-                大学を選択してください
-              </div>
-            )}
+            </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
@@ -585,6 +597,7 @@ export default function Home() {
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                 時間 (15分単位)
               </label>
+              {/* TimeSlider remains unchanged */}
               <TimeSlider
                 selectedSlots={selectedTimeSlots}
                 onChange={setSelectedTimeSlots}
@@ -606,74 +619,28 @@ export default function Home() {
               searchResults.length > 0 ? (
                 <section id="results-section">
                   <h2 className="text-lg font-semibold mb-4 flex items-center text-[var(--text-primary)]">
-                    <i className="fas fa-chalkboard-teacher mr-2"></i>検索結果:{" "}
-                    {searchResults.length}件
+                    <i className="fas fa-chalkboard-teacher mr-2"></i>検索結果: {searchResults.length}件
                   </h2>
-                  <div className="space-y-4">
-                    {searchResults.map((result) => (
-                      <div
-                        key={result.id}
-                        className="bg-[var(--bg-secondary)] p-4 rounded-lg shadow-sm border border-[var(--border-color)]"
-                      >
+                  <div className="space-y-2">
+                    {searchResults.map((room) => (
+                      <div key={room} className="bg-[var(--bg-secondary)] p-3 rounded-lg border border-[var(--border-color)]">
                         <div className="flex justify-between items-start">
-                          <h3 className="font-bold text-[var(--text-primary)]">
-                            {result.name}
-                          </h3>
-                          <span className="text-xs font-mono text-[var(--text-tertiary)]">
-                            ID: {result.id}
-                          </span>
+                          <h3 className="font-bold text-[var(--text-primary)]">{room}</h3>
                         </div>
-                        <p className="text-sm text-[var(--text-secondary)]">
-                          <i className="fas fa-building mr-2"></i>
-                          {result.building}
-                        </p>
-                        <p className="text-sm text-[var(--text-secondary)]">
-                          <i className="fas fa-users mr-2"></i>
-                          {result.capacity}人
-                        </p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {result.attributes.map((attr) => (
-                            <span
-                              key={attr}
-                              className="bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                            >
-                              {attr}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs text-[var(--text-secondary)]">
-                            <span>8:00</span>
-                            <span>20:00</span>
-                          </div>
-                          <TimelineBar
-                            schedule={result.schedule.filter(
-                              (s) => s.day === selectedDay,
-                            )}
-                          />
-                          <p className="text-xs text-[var(--text-secondary)] mt-1 text-right">
-                            空き時間
-                          </p>
-                        </div>
+                        <p className="text-sm text-[var(--text-secondary)] mt-1">この時間帯は空きです</p>
                       </div>
                     ))}
                   </div>
                 </section>
               ) : (
-                <div
-                  id="no-results-message"
-                  className="text-center text-[var(--text-tertiary)] py-8"
-                >
+                <div id="no-results-message" className="text-center text-[var(--text-tertiary)] py-8">
                   <i className="fas fa-ghost text-4xl mb-3"></i>
                   <p>空き教室が見つかりませんでした</p>
                   <p className="text-sm">条件を変えて再検索してください</p>
                 </div>
               )
             ) : (
-              <div
-                id="initial-message"
-                className="text-center text-[var(--text-tertiary)] py-8"
-              >
+              <div id="initial-message" className="text-center text-[var(--text-tertiary)] py-8">
                 <i className="fas fa-search text-4xl mb-3"></i>
                 <p>上の条件で検索してください</p>
               </div>
@@ -681,142 +648,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* University Selection Modal */}
-        {/* 既存の大学モーダルもModalでラップ */}
-        <Modal
-          isOpen={isUniversityModalOpen}
-          onClose={() => {
-            setIsUniversityModalOpen(false);
-            setUniversitySearch("");
-          }}
-        >
-          <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
-            <h3 className="text-lg font-bold">大学一覧</h3>
-            <button
-              onClick={() => {
-                setIsUniversityModalOpen(false);
-                setUniversitySearch("");
-              }}
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl"
-            >
-              &times;
-            </button>
-          </header>
-          <div className="p-4 flex-grow overflow-y-auto">
-            <input
-              type="text"
-              value={universitySearch}
-              onChange={(e) => setUniversitySearch(e.target.value)}
-              placeholder="大学名で検索..."
-              className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
-            />
-            <ul className="space-y-1">
-              {filteredUniversities.map((uni) => (
-                <li key={uni.name}>
-                  <button
-                    onClick={() => handleUniversitySelect(uni)}
-                    className={`w-full text-left p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${
-                      selectedUniversity?.name === uni.name
-                        ? "selected font-bold text-[var(--text-primary)]"
-                        : "text-[var(--text-secondary)]"
-                    }`}
-                  >
-                    {uni.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Modal>
-
-        {/* Building Modal */}
-        <Modal
-          isOpen={isBuildingModalOpen}
-          onClose={() => setIsBuildingModalOpen(false)}
-        >
-          <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[var(--text-primary)]">
-              建物を選択
-            </h2>
-            <button
-              onClick={() => setIsBuildingModalOpen(false)}
-              className="text-2xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </header>
-          <div className="p-4">
-            <input
-              type="text"
-              value={buildingSearch}
-              onChange={(e) => setBuildingSearch(e.target.value)}
-              placeholder="建物名で検索..."
-              className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
-            />
-            <ul className="space-y-2 max-h-60 overflow-y-auto">
-              {filteredBuildings.map((b) => (
-                <li key={b}>
-                  <button
-                    onClick={() => {
-                      handleBuildingChange(b);
-                      setIsBuildingModalOpen(false);
-                    }}
-                    className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                  >
-                    <span className="font-semibold text-[var(--text-primary)]">
-                      {b === "all" ? "すべて" : b}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Modal>
-
-        {/* Classroom Modal */}
-        <Modal
-          isOpen={isClassroomModalOpen}
-          onClose={() => setIsClassroomModalOpen(false)}
-        >
-          <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
-            <h2 className="text-lg font-bold text-[var(--text-primary)]">
-              教室を選択
-            </h2>
-            <button
-              onClick={() => setIsClassroomModalOpen(false)}
-              className="text-2xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </header>
-          <div className="p-4">
-            <input
-              type="text"
-              value={classroomSearch}
-              onChange={(e) => setClassroomSearch(e.target.value)}
-              placeholder="教室名で検索..."
-              className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
-            />
-            <ul className="space-y-2 max-h-60 overflow-y-auto">
-              {filteredClassrooms.map((c) => (
-                <li key={c.id}>
-                  <button
-                    onClick={() => {
-                      /* 教室選択ロジック */ setIsClassroomModalOpen(false);
-                    }}
-                    className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                  >
-                    <span className="font-semibold text-[var(--text-primary)]">
-                      {c.name}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Modal>
-
-        {/* Menu Modal */}
+        {/* Menu Modal (unchanged) */}
         {isMenuOpen && (
           <div
             id="menu-modal"
@@ -824,9 +656,7 @@ export default function Home() {
           >
             <div className="bg-[var(--bg-primary)] rounded-xl shadow-2xl w-full max-w-xs flex flex-col">
               <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
-                <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                  メニュー
-                </h2>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">メニュー</h2>
                 <button
                   onClick={() => setIsMenuOpen(false)}
                   className="text-2xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -852,8 +682,7 @@ export default function Home() {
                         onClick={() => setIsMenuOpen(false)}
                         className="block py-2 px-4 text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg"
                       >
-                        <i className="fas fa-question-circle w-6 mr-2"></i>
-                        使い方
+                        <i className="fas fa-question-circle w-6 mr-2"></i>使い方
                       </Link>
                     </li>
                     <li>
@@ -862,8 +691,7 @@ export default function Home() {
                         onClick={() => setIsMenuOpen(false)}
                         className="block py-2 px-4 text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg"
                       >
-                        <i className="fas fa-comment-dots w-6 mr-2"></i>
-                        教室レビュー
+                        <i className="fas fa-comment-dots w-6 mr-2"></i>教室レビュー
                       </Link>
                     </li>
                     <li className="mb-4">
@@ -880,11 +708,139 @@ export default function Home() {
           </div>
         )}
       </main>
-      <Toast
-        message={toast.message}
-        show={toast.show}
-        isError={toast.isError}
-      />
+      <Toast message={toast.message} show={toast.show} isError={toast.isError} />
+
+      {/* University Selection Modal（大阪大学のみ表示） */}
+      <Modal
+        isOpen={isUniversityModalOpen}
+        onClose={() => {
+          setIsUniversityModalOpen(false);
+          setUniversitySearch("");
+        }}
+      >
+        <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+          <h3 className="text-lg font-bold">大学一覧</h3>
+          <button
+            onClick={() => {
+              setIsUniversityModalOpen(false);
+              setUniversitySearch("");
+            }}
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-2xl"
+          >
+            &times;
+          </button>
+        </header>
+        <div className="p-4 flex-grow overflow-y-auto">
+          <input
+            type="text"
+            value={universitySearch}
+            onChange={(e) => setUniversitySearch(e.target.value)}
+            placeholder="大学名で検索...（現在大阪大学のみ）"
+            className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
+          />
+          <ul className="space-y-1">
+            {filteredUniversities.map((uni) => (
+              <li key={uni.name}>
+                <button
+                  onClick={() => handleUniversitySelect(uni)}
+                  className={`w-full text左 p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${
+                    selectedUniversity?.name === uni.name
+                      ? "selected font-bold text-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)]"
+                  }`}
+                >
+                  {uni.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Modal>
+
+      {/* Building Modal（UI維持） */}
+      <Modal
+        isOpen={isBuildingModalOpen}
+        onClose={() => setIsBuildingModalOpen(false)}
+      >
+        <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">建物を選択</h2>
+          <button
+            onClick={() => setIsBuildingModalOpen(false)}
+            className="text-2xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </header>
+        <div className="p-4">
+          <input
+            type="text"
+            value={buildingSearch}
+            onChange={(e) => setBuildingSearch(e.target.value)}
+            placeholder="建物名で検索..."
+            className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
+          />
+          <ul className="space-y-2 max-h-60 overflow-y-auto">
+            {filteredBuildings.map((b) => (
+              <li key={b}>
+                <button
+                  onClick={() => {
+                    handleBuildingChange(b);
+                    setIsBuildingModalOpen(false);
+                  }}
+                  className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                >
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {b === "all" ? "すべて" : b}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Modal>
+
+      {/* Classroom Modal（UI維持） */}
+      <Modal
+        isOpen={isClassroomModalOpen}
+        onClose={() => setIsClassroomModalOpen(false)}
+      >
+        <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">教室を選択</h2>
+          <button
+            onClick={() => setIsClassroomModalOpen(false)}
+            className="text-2xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </header>
+        <div className="p-4">
+          <input
+            type="text"
+            value={classroomSearch}
+            onChange={(e) => setClassroomSearch(e.target.value)}
+            placeholder="教室名で検索...（正規表現可）"
+            className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
+          />
+          <ul className="space-y-2 max-h-60 overflow-y-auto">
+            {filteredClassrooms.map((c) => (
+              <li key={c.id}>
+                <button
+                  onClick={() => {
+                    // 教室名を正規表現欄に適用
+                    setClassroomSearch(c.name);
+                    setIsClassroomModalOpen(false);
+                  }}
+                  className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                >
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {c.name}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Modal>
     </>
   );
 }
