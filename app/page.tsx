@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { mockUniversities, mockClassrooms } from "./lib/data";
 import Modal from "./components/Modal";
@@ -247,6 +247,8 @@ export default function Home() {
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [classroomSearch, setClassroomSearch] = useState("");
+  // 入力と建物タグの同期制御: ユーザーが入力したらtrue、空に戻したらfalseで自動同期を再開
+  const [isClassroomSearchDirty, setIsClassroomSearchDirty] = useState(false);
   const [universitySearch, setUniversitySearch] = useState("");
   const [toast, setToast] = useState({
     show: false,
@@ -311,13 +313,9 @@ export default function Home() {
     (b) => b === "all" || b.includes(buildingSearch),
   );
   const classrooms =
-    selectedUniversity &&
-    selectedBuildings.size === 1 &&
-    !selectedBuildings.has("all")
+    selectedUniversity
       ? mockClassrooms.filter(
-          (c) =>
-            c.university === selectedUniversity.name &&
-            selectedBuildings.has(c.building),
+          (c) => c.university === selectedUniversity.name,
         )
       : [];
   // 大学は大阪大学のみ表示
@@ -329,6 +327,28 @@ export default function Home() {
   const filteredClassrooms = classrooms.filter((c) =>
     c.name.includes(classroomSearch),
   );
+
+  // 選択された建物タグから教室名フィルタ用の表示トークンを生成
+  const buildingTokenMap: Record<string, string> = {
+    "全学共通棟": "共",
+    "基礎工学棟": "基",
+  };
+  const selectedTokens = useMemo(
+    () =>
+      Array.from(selectedBuildings)
+        .filter((b) => b !== "all")
+        .map((b) => buildingTokenMap[b])
+        .filter((t): t is string => Boolean(t)),
+    [selectedBuildings],
+  );
+
+  // 教室名入力欄と建物タグの自動同期: ユーザー未入力のときはトークンをそのまま表示
+  useEffect(() => {
+    if (!isClassroomSearchDirty) {
+      const tokenString = selectedTokens.join(", ");
+      setClassroomSearch(tokenString);
+    }
+  }, [selectedTokens, isClassroomSearchDirty]);
 
   // Handlers
   const handleSearch = async () => {
@@ -347,16 +367,20 @@ export default function Home() {
     try {
       const p = new URLSearchParams({ day: String(selectedDay), start, end });
 
-      // room_regex: user input has precedence; otherwise map selected buildings to regex
-      const textFilter = classroomSearch.trim();
-      if (textFilter) {
-        p.append("room_regex", textFilter);
+      // room_regex: ユーザー入力があればそれを優先。なければ建物タグから生成
+      const rawText = classroomSearch.trim();
+      const hasSep = /[、，,\s]/.test(rawText);
+      if (isClassroomSearchDirty && rawText) {
+        const normalized = hasSep
+          ? rawText
+              .split(/[、，,\s]+/)
+              .filter(Boolean)
+              .join("|")
+          : rawText;
+        p.append("room_regex", normalized);
       } else {
-        const selection = Array.from(selectedBuildings).filter((b) => b !== "all");
-        const map: Record<string, string> = { "全学共通棟": "共", "基礎工学棟": "基" };
-        const tokens = selection.map((b) => map[b]).filter(Boolean);
-        if (tokens.length > 0) {
-          p.append("room_regex", tokens.join("|"));
+        if (selectedTokens.length > 0) {
+          p.append("room_regex", selectedTokens.join("|"));
         }
       }
 
@@ -426,11 +450,12 @@ export default function Home() {
               closestBuilding = b.building;
             }
           });
+          // 位置情報の建物は A〜D 等のため、キュレート済みタグとは一致しない。
+          // 現仕様ではタグは "すべて" にリセットする。
+          setSelectedBuildings(new Set(["all"]));
           if (closestBuilding) {
-            setSelectedBuildings(new Set([closestBuilding]));
-            showToast(`現在地から${universityName}、${closestBuilding}を適用しました`);
+            showToast(`現在地から${universityName}を適用しました（建物タグは すべて を選択）`);
           } else {
-            setSelectedBuildings(new Set(["all"]));
             showToast(`現在地から${universityName}を適用しました`);
           }
         } else {
@@ -527,7 +552,7 @@ export default function Home() {
                 <button
                   onClick={() => setIsUniversityModalOpen(true)}
                   id="university-select-btn"
-                  className="w-full text-left pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]"
+                  className="w-full text左 pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]"
                 >
                   <span
                     id="selected-university-name"
@@ -565,15 +590,20 @@ export default function Home() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                教室名フィルタ（正規表現・任意）
+                教室名フィルタ
               </label>
               <input
                 type="text"
                 value={classroomSearch}
-                onChange={(e) => setClassroomSearch(e.target.value)}
-                placeholder="例: ^共|人/"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setClassroomSearch(v);
+                  setIsClassroomSearchDirty(v.trim().length > 0 ? true : false);
+                }}
+                placeholder="例: 共, 基"
                 className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--bg-primary)]"
               />
+              {/* 自動表示は入力欄に反映するため、下のヒント表示は削除 */}
             </div>
 
             <div className="mb-4">
@@ -611,6 +641,12 @@ export default function Home() {
             >
               <i className="fas fa-search mr-2"></i>さがす
             </button>
+
+            {hasSearched && (
+              <p className="mt-3 text-xs text-[var(--text-tertiary)]">
+                検索結果は選択した時間帯に以下の教室で大学公式シラバスに掲載された講義が行われていないことを意味するものであり、イベントや研究室の活動、自主活動等は含まれません。正確な情報は確認し、社会の規範に反する行為は控えてください。
+              </p>
+            )}
           </section>
 
           {/* Search Results */}
@@ -787,7 +823,7 @@ export default function Home() {
                     handleBuildingChange(b);
                     setIsBuildingModalOpen(false);
                   }}
-                  className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                  className="w-full text左 p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
                 >
                   <span className="font-semibold text-[var(--text-primary)]">
                     {b === "all" ? "すべて" : b}
@@ -817,8 +853,12 @@ export default function Home() {
           <input
             type="text"
             value={classroomSearch}
-            onChange={(e) => setClassroomSearch(e.target.value)}
-            placeholder="教室名で検索...（正規表現可）"
+            onChange={(e) => {
+              const v = e.target.value;
+              setClassroomSearch(v);
+              setIsClassroomSearchDirty(v.trim().length > 0 ? true : false);
+            }}
+            placeholder="教室名で検索...（正規表現可／例: 共, 基 または ^共|基）"
             className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
           />
           <ul className="space-y-2 max-h-60 overflow-y-auto">
@@ -828,9 +868,10 @@ export default function Home() {
                   onClick={() => {
                     // 教室名を正規表現欄に適用
                     setClassroomSearch(c.name);
+                    setIsClassroomSearchDirty(true);
                     setIsClassroomModalOpen(false);
                   }}
-                  className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                  className="w-full text左 p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
                 >
                   <span className="font-semibold text-[var(--text-primary)]">
                     {c.name}
