@@ -106,9 +106,20 @@ const TimelineBar: React.FC<TimelineBarProps> = ({ schedule }) => {
     .sort((a, b) => a - b);
 
   return (
-    <div className="relative pt-5">
-      {/* boundary times above bar */}
-      <div className="absolute inset-x-0 top-0 h-5 pointer-events-none">
+    <div className="relative">
+      {/* bar */}
+      <div ref={barRef} className="w-full h-6 bg-[var(--timeline-bg)] rounded-md flex relative overflow-hidden">
+        {freeSlots.map((slot, i) => (
+          <div
+            key={i}
+            className="absolute h-full"
+            style={{ left: `${slot.left}%`, width: `${slot.width}%`, backgroundColor: 'var(--timeline-bar-bg)' }}
+          />
+        ))}
+      </div>
+
+      {/* boundary times below bar with same spacing as top labels (mt-1) */}
+      <div className="relative h-5 mt-1 pointer-events-none">
         {boundaries.map((t) => {
           const leftPct = ((t - dayStart) / totalMinutes) * 100;
           const clampedLeft = Math.min(98, Math.max(2, leftPct));
@@ -122,17 +133,6 @@ const TimelineBar: React.FC<TimelineBarProps> = ({ schedule }) => {
             </span>
           );
         })}
-      </div>
-
-      {/* bar */}
-      <div ref={barRef} className="w-full h-6 bg-[var(--timeline-bg)] rounded-md flex relative overflow-hidden">
-        {freeSlots.map((slot, i) => (
-          <div
-            key={i}
-            className="absolute h-full"
-            style={{ left: `${slot.left}%`, width: `${slot.width}%`, backgroundColor: 'var(--timeline-bar-bg)' }}
-          />
-        ))}
       </div>
     </div>
   );

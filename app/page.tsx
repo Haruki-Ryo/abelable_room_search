@@ -308,6 +308,8 @@ export default function Home() {
         "all",
         "全学共通棟",
         "基礎工学棟",
+        "理学棟",
+        "工学棟",
       ]
     : [];
 
@@ -332,15 +334,17 @@ export default function Home() {
   );
 
   // 選択された建物タグから教室名フィルタ用の表示トークンを生成
-  const buildingTokenMap: Record<string, string> = {
-    "全学共通棟": "共",
-    "基礎工学棟": "基",
+  const buildingTokensMap: Record<string, string[]> = {
+    "全学共通棟": ["共A", "共B", "共C"],
+    "基礎工学棟": ["基礎工学", "基/"],
+    "理学棟": ["理学", "理/"],
+    "工学棟": ["工/"],
   };
   const selectedTokens = useMemo(
     () =>
       Array.from(selectedBuildings)
         .filter((b) => b !== "all")
-        .map((b) => buildingTokenMap[b])
+        .flatMap((b) => buildingTokensMap[b] || [])
         .filter((t): t is string => Boolean(t)),
     [selectedBuildings],
   );
@@ -406,6 +410,20 @@ export default function Home() {
     const start = toHHMM(480 + 15 * minSlot);
     const end = toHHMM(480 + 15 * maxSlot);
 
+    // helper: escape regex metacharacters for literal tokens
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // helper: transform a token for regex. If it ends with '/', anchor to start
+    const toRegexToken = (t: string, treatAsLiteral: boolean) => {
+      const trimmed = t.trim();
+      if (!trimmed) return "";
+      const literal = treatAsLiteral ? escapeRegex(trimmed) : trimmed;
+      if (trimmed.endsWith("/")) {
+        // Auto front-anchor tokens like 工/, 理/, 基/, 文法経/
+        return literal.startsWith("^") ? literal : `^${literal}`;
+      }
+      return literal;
+    };
+
     try {
       const p = new URLSearchParams({ day: String(selectedDay), start, end });
 
@@ -413,16 +431,20 @@ export default function Home() {
       const rawText = classroomSearch.trim();
       const hasSep = /[、，,\s]/.test(rawText);
       if (isClassroomSearchDirty && rawText) {
-        const normalized = hasSep
-          ? rawText
-              .split(/[、，,\s]+/)
-              .filter(Boolean)
-              .join("|")
-          : rawText;
-        p.append("room_regex", normalized);
+        if (hasSep) {
+          // comma/space separated → treat each as literal, then OR
+          const parts = rawText.split(/[、，,\s]+/).map((t) => toRegexToken(t, true)).filter(Boolean);
+          if (parts.length > 0) p.append("room_regex", parts.join("|"));
+        } else {
+          // single token → keep regex if any, but auto front-anchor tokens ending with '/'
+          const token = toRegexToken(rawText, false);
+          p.append("room_regex", token);
+        }
       } else {
         if (selectedTokens.length > 0) {
-          p.append("room_regex", selectedTokens.join("|"));
+          // Curated tokens are literals; anchor tokens ending with '/'
+          const parts = selectedTokens.map((t) => toRegexToken(t, true)).filter(Boolean);
+          p.append("room_regex", parts.join("|"));
         }
       }
 
@@ -470,7 +492,7 @@ export default function Home() {
         ) => {
           const R = 6371;
           const dLat = ((lat2 - lat1) * Math.PI) / 180;
-          const dLon = ((lon2 - lon1) * Math.PI) / 180;
+          const dLon = ((lon1 - lon2) * Math.PI) / 180;
           const a =
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.cos((lat1 * Math.PI) / 180) *
@@ -625,6 +647,7 @@ export default function Home() {
                   buildings={buildings}
                   selected={selectedBuildings}
                   onChange={handleBuildingChange}
+                  onOpenList={() => setIsBuildingModalOpen(true)}
                 />
               ) : (
                 <div
@@ -648,7 +671,7 @@ export default function Home() {
                   setClassroomSearch(v);
                   setIsClassroomSearchDirty(v.trim().length > 0 ? true : false);
                 }}
-                placeholder="例: 共, 基"
+                placeholder="例: 共A, 共B, 共C ／ 基礎工学, 基/ ／ 理学, 理/ ／ 工/ ／ 文法経/（先頭一致）"
                 className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--bg-primary)]"
               />
               {/* 自動表示は入力欄に反映するため、下のヒント表示は削除 */}
@@ -710,7 +733,7 @@ export default function Home() {
                       <div key={room} className="bg-[var(--bg-secondary)] p-4 rounded-lg border border-[var(--border-color)]">
                         {/* 建物ピルはデータ未整備のため非表示（将来対応） */}
                         <div className="flex justify-between items-start mb-1">
-                          <h3 className="font-extrabold text-2xl sm:text-3xl leading-tight text-[var(--text-primary)]">{room}</h3>
+                          <h3 className="font-extrabold text-lg leading-tight text-[var(--text-primary)]">{room}</h3>
                           {/* 将来の属性タグ置き場（会話OK、コンセントなど） */}
                         </div>
                         {/* タイムライン（8:00 - 20:00） */}
@@ -859,7 +882,7 @@ export default function Home() {
         onClose={() => setIsBuildingModalOpen(false)}
       >
         <header className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
-          <h2 className="text-lg font-bold text-[var(--text-primary)]">建物を選択</h2>
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">建物一覧</h2>
           <button
             onClick={() => setIsBuildingModalOpen(false)}
             className="text-2xl text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -867,7 +890,7 @@ export default function Home() {
             <i className="fas fa-times"></i>
           </button>
         </header>
-        <div className="p-4">
+        <div className="p-4 flex flex-col max-h-[70vh]">
           <input
             type="text"
             value={buildingSearch}
@@ -875,23 +898,31 @@ export default function Home() {
             placeholder="建物名で検索..."
             className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
           />
-          <ul className="space-y-2 max-h-60 overflow-y-auto">
+          <ul className="space-y-3 overflow-y-auto flex-1 pr-1">
             {filteredBuildings.map((b) => (
               <li key={b}>
-                <button
-                  onClick={() => {
-                    handleBuildingChange(b);
-                    setIsBuildingModalOpen(false);
-                  }}
-                  className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                >
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {b === "all" ? "すべて" : b}
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="form-checkbox accent-[var(--accent-color)] w-5 h-5"
+                    checked={selectedBuildings.has(b)}
+                    onChange={() => handleBuildingChange(b)}
+                  />
+                  <span className={`font-medium ${selectedBuildings.has(b) ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
+                    {b === 'all' ? 'すべて' : b}
                   </span>
-                </button>
+                </label>
               </li>
             ))}
           </ul>
+          <div className="pt-4">
+            <button
+              className="w-full bg-[var(--header-bg)] text-[var(--header-text)] font-bold py-2.5 rounded-lg hover:opacity-90 transition-all shadow-md"
+              onClick={() => setIsBuildingModalOpen(false)}
+            >
+              完了
+            </button>
+          </div>
         </div>
       </Modal>
 
@@ -918,7 +949,7 @@ export default function Home() {
               setClassroomSearch(v);
               setIsClassroomSearchDirty(v.trim().length > 0 ? true : false);
             }}
-            placeholder="教室名で検索...（正規表現可／例: 共, 基 または ^共|基）"
+            placeholder="教室名で検索...（正規表現可／例: 共A, 共B, 共C または 基礎工学, 基/ または 理学, 理/ または 工/ または 文法経/（先頭一致））"
             className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md mb-4 bg-[var(--bg-primary)]"
           />
           <ul className="space-y-2 max-h-60 overflow-y-auto">
