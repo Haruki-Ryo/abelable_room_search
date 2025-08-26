@@ -552,7 +552,7 @@ export default function Home() {
                 <button
                   onClick={() => setIsUniversityModalOpen(true)}
                   id="university-select-btn"
-                  className="w-full text左 pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]"
+                  className="w-full text-left pl-10 pr-4 py-2 border border-[var(--border-color)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] bg-[var(--bg-primary)]"
                 >
                   <span
                     id="selected-university-name"
@@ -779,7 +779,7 @@ export default function Home() {
               <li key={uni.name}>
                 <button
                   onClick={() => handleUniversitySelect(uni)}
-                  className={`w-full text左 p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${
+                  className={`w-full text-left p-2 hover:bg-[var(--bg-secondary)] rounded cursor-pointer ${
                     selectedUniversity?.name === uni.name
                       ? "selected font-bold text-[var(--text-primary)]"
                       : "text-[var(--text-secondary)]"
@@ -823,7 +823,7 @@ export default function Home() {
                     handleBuildingChange(b);
                     setIsBuildingModalOpen(false);
                   }}
-                  className="w-full text左 p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                  className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
                 >
                   <span className="font-semibold text-[var(--text-primary)]">
                     {b === "all" ? "すべて" : b}
@@ -871,7 +871,7 @@ export default function Home() {
                     setIsClassroomSearchDirty(true);
                     setIsClassroomModalOpen(false);
                   }}
-                  className="w-full text左 p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                  className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
                 >
                   <span className="font-semibold text-[var(--text-primary)]">
                     {c.name}
