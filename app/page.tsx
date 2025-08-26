@@ -9,6 +9,23 @@ import ThemeMenu from "./components/ThemeMenu";
 import BuildingTags from "./components/BuildingTags";
 import TimelineBar from "./components/TimelineBar";
 
+// Module-level stable constants to avoid recreating on each render
+const BUILDING_TOKENS_MAP: Record<string, string[]> = {
+  "全学共通棟": ["共A", "共B", "共C"],
+  "基礎工学棟": ["基礎工学", "基/"],
+  "理学棟": ["理学", "理/"],
+  "工学棟": ["工/"],
+};
+
+const PERIODS: ReadonlyArray<readonly [string, string]> = [
+  ["08:50", "10:20"],
+  ["10:30", "12:00"],
+  ["13:30", "15:00"],
+  ["15:10", "16:40"],
+  ["16:50", "18:20"],
+  ["18:30", "20:00"],
+];
+
 // Type definitions
 
 interface TimeSliderProps {
@@ -334,17 +351,11 @@ export default function Home() {
   );
 
   // 選択された建物タグから教室名フィルタ用の表示トークンを生成
-  const buildingTokensMap: Record<string, string[]> = {
-    "全学共通棟": ["共A", "共B", "共C"],
-    "基礎工学棟": ["基礎工学", "基/"],
-    "理学棟": ["理学", "理/"],
-    "工学棟": ["工/"],
-  };
   const selectedTokens = useMemo(
     () =>
       Array.from(selectedBuildings)
         .filter((b) => b !== "all")
-        .flatMap((b) => buildingTokensMap[b] || [])
+        .flatMap((b) => BUILDING_TOKENS_MAP[b] || [])
         .filter((t): t is string => Boolean(t)),
     [selectedBuildings],
   );
@@ -356,16 +367,6 @@ export default function Home() {
       setClassroomSearch(tokenString);
     }
   }, [selectedTokens, isClassroomSearchDirty]);
-
-  // 時限の時間帯（/api/availability と同一定義）
-  const PERIODS: ReadonlyArray<readonly [string, string]> = [
-    ["08:50", "10:20"],
-    ["10:30", "12:00"],
-    ["13:30", "15:00"],
-    ["15:10", "16:40"],
-    ["16:50", "18:20"],
-    ["18:30", "20:00"],
-  ];
 
   // 指定日の1日スケジュール（忙しい時間帯）を結果の教室分だけ推定
   const buildBusyScheduleForRooms = useCallback(async (rooms: string[], day: number) => {
@@ -394,7 +395,7 @@ export default function Home() {
       busyMap[room] = busy;
     }
     setPerRoomBusy(busyMap);
-  }, [PERIODS]);
+  }, []);
 
   // Handlers
   const handleSearch = async () => {
@@ -504,7 +505,7 @@ export default function Home() {
         };
         // 大学は大阪大学のみ対象
         const ou = mockUniversities.find((u) => u.name === "大阪大学") || null;
-        let closestUniversity: University | null = ou;
+        const closestUniversity: University | null = ou;
         if (closestUniversity) {
           setSelectedUniversity(closestUniversity);
           const universityName = closestUniversity.name;
