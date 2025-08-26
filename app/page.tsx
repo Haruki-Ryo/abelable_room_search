@@ -7,6 +7,7 @@ import Modal from "./components/Modal";
 import Toast from "./components/Toast";
 import ThemeMenu from "./components/ThemeMenu";
 import BuildingTags from "./components/BuildingTags";
+import TimelineBar from "./components/TimelineBar";
 
 // Type definitions
 
@@ -240,6 +241,8 @@ export default function Home() {
   );
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  // 検索結果用: 部屋ごとの忙しい時間（講義がある時間）
+  const [perRoomBusy, setPerRoomBusy] = useState<Record<string, { start: string; end: string }[]>>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   // 1. State追加（UI維持のため）
@@ -350,6 +353,45 @@ export default function Home() {
     }
   }, [selectedTokens, isClassroomSearchDirty]);
 
+  // 時限の時間帯（/api/availability と同一定義）
+  const PERIODS: ReadonlyArray<readonly [string, string]> = [
+    ["08:50", "10:20"],
+    ["10:30", "12:00"],
+    ["13:30", "15:00"],
+    ["15:10", "16:40"],
+    ["16:50", "18:20"],
+    ["18:30", "20:00"],
+  ];
+
+  // 指定日の1日スケジュール（忙しい時間帯）を結果の教室分だけ推定
+  const buildBusyScheduleForRooms = useCallback(async (rooms: string[], day: number) => {
+    if (rooms.length === 0) {
+      setPerRoomBusy({});
+      return;
+    }
+    const requests = PERIODS.map(([s, e]) =>
+      fetch(`/api/availability?${new URLSearchParams({ day: String(day), start: s, end: e }).toString()}`, { cache: "no-store" })
+        .then(async (r) => {
+          const j = (await r.json()) as { rooms: string[] };
+          return new Set(j.rooms);
+        })
+        .catch(() => new Set<string>())
+    );
+    const freeSets = await Promise.all(requests);
+    const busyMap: Record<string, { start: string; end: string }[]> = {};
+    for (const room of rooms) {
+      const busy: { start: string; end: string }[] = [];
+      PERIODS.forEach(([s, e], idx) => {
+        const freeSet = freeSets[idx];
+        if (!freeSet.has(room)) {
+          busy.push({ start: s, end: e });
+        }
+      });
+      busyMap[room] = busy;
+    }
+    setPerRoomBusy(busyMap);
+  }, [PERIODS]);
+
   // Handlers
   const handleSearch = async () => {
     if (!selectedDay || selectedTimeSlots.size === 0) {
@@ -396,6 +438,12 @@ export default function Home() {
       }
       setSearchResults(json.rooms);
       setHasSearched(true);
+      // 結果の教室について当日全体のビジースロットを取得してタイムライン表示
+      if (selectedDay) {
+        buildBusyScheduleForRooms(json.rooms, selectedDay);
+      } else {
+        setPerRoomBusy({});
+      }
     } catch {
       showToast("検索時にエラーが発生しました", true);
       setSearchResults([]);
@@ -657,13 +705,25 @@ export default function Home() {
                   <h2 className="text-lg font-semibold mb-4 flex items-center text-[var(--text-primary)]">
                     <i className="fas fa-chalkboard-teacher mr-2"></i>検索結果: {searchResults.length}件
                   </h2>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {searchResults.map((room) => (
-                      <div key={room} className="bg-[var(--bg-secondary)] p-3 rounded-lg border border-[var(--border-color)]">
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-bold text-[var(--text-primary)]">{room}</h3>
+                      <div key={room} className="bg-[var(--bg-secondary)] p-4 rounded-lg border border-[var(--border-color)]">
+                        {/* 建物ピルはデータ未整備のため非表示（将来対応） */}
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className="font-extrabold text-2xl sm:text-3xl leading-tight text-[var(--text-primary)]">{room}</h3>
+                          {/* 将来の属性タグ置き場（会話OK、コンセントなど） */}
                         </div>
-                        <p className="text-sm text-[var(--text-secondary)] mt-1">この時間帯は空きです</p>
+                        {/* タイムライン（8:00 - 20:00） */}
+                        <div className="mt-2">
+                          <div className="flex justify-between text-sm text-[var(--text-secondary)] mb-1">
+                            <span>8:00</span>
+                            <span>20:00</span>
+                          </div>
+                          <TimelineBar schedule={perRoomBusy[room] || []} />
+                          <div className="flex justify-end mt-1">
+                            <span className="text-sm text-[var(--text-tertiary)]">空き時間（{["", "月", "火", "水", "木", "金", "土"][selectedDay || 0]}曜）</span>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>

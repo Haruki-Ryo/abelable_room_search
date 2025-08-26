@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,7 +16,9 @@ export default function Header() {
   useEffect(() => {
     const applyTheme = (t: 'light' | 'dark' | 'system') => {
       const root = document.documentElement;
-      if (t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const dark = t === 'dark' || (t === 'system' && prefersDark);
+      if (dark) {
         root.classList.add('dark');
       } else {
         root.classList.remove('dark');
@@ -23,18 +26,27 @@ export default function Header() {
     };
     applyTheme(theme);
     localStorage.setItem('theme', theme);
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const listener = () => {
-      if (localStorage.getItem('theme') === 'system') applyTheme('system');
+      if ((localStorage.getItem('theme') as 'light' | 'dark' | 'system') === 'system') applyTheme('system');
     };
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', listener);
-    return () => window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', listener);
+    mql.addEventListener('change', listener);
+    return () => mql.removeEventListener('change', listener);
   }, [theme]);
 
   return (
     <>
       <header className="bg-[var(--header-bg)] text-[var(--header-text)] p-4 flex items-center justify-between shadow-md sticky top-0 z-20">
         <Link href="/" className="flex items-center flex-grow">
-          <i className="fas fa-home text-2xl mr-3"></i>
+          {/* Always use main logo */}
+          <Image
+            src={'/logo_main.PNG'}
+            alt="大学空き教室検索ロゴ"
+            width={40}
+            height={40}
+            className="w-10 h-10 mr-3"
+            priority
+          />
           <h1 className="text-xl font-bold tracking-wider">大学空き教室検索</h1>
         </Link>
         <button onClick={() => setIsMenuOpen(true)} id="menu-btn" className="text-2xl">
