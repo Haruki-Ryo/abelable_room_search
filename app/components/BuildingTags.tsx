@@ -132,7 +132,7 @@ const BuildingTags: React.FC<BuildingTagsProps> = ({ buildings, selected, onChan
           </button>
         )}
       </div>
-      <div ref={trackRef} className="w-full h-1 bg-[var(--bg-tertiary)] rounded-full mt-1 relative" style={{ display: canScroll ? '' as any : 'none' }}>
+      <div ref={trackRef} className="w-full h-1 bg-[var(--bg-tertiary)] rounded-full mt-1 relative" style={{ display: canScroll ? '' : 'none' }}>
         <div ref={thumbRef} className="h-1 bg-[var(--text-tertiary)] rounded-full absolute top-0 left-0"></div>
       </div>
     </div>
